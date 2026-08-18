@@ -53,7 +53,7 @@ const AGG_LABELS: Record<Aggregation, string> = {
 }
 
 export function IndicadoresView() {
-  const { activeDataset } = useDataStore()
+  const { filteredDataset: activeDataset } = useDataStore()
 
   const cats = activeDataset ? categoryColumns(activeDataset) : []
   const nums = activeDataset ? numericColumns(activeDataset) : []
@@ -193,7 +193,8 @@ export function IndicadoresView() {
             <CardTitle className="text-base">{measureLabel} por {dim}</CardTitle>
             <CardDescription>Top {chartData.length} categorias</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="scroll-touch overflow-x-auto">
+            <div className="min-w-[480px]">
             <ResponsiveContainer width="100%" height={320}>
               <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
                 <XAxis
@@ -217,6 +218,7 @@ export function IndicadoresView() {
                 <Bar dataKey="value" radius={[4, 4, 0, 0]} fill="var(--chart-1)" />
               </BarChart>
             </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
 
@@ -305,7 +307,7 @@ export function IndicadoresView() {
           <CardTitle className="text-base">Amostra dos dados</CardTitle>
           <CardDescription>Primeiras 8 linhas de {activeDataset.sheetName}</CardDescription>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
+        <CardContent className="scroll-touch overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>

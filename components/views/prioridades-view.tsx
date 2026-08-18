@@ -25,7 +25,7 @@ interface PrioridadesViewProps {
 }
 
 export function PrioridadesView({ onSelectAction }: PrioridadesViewProps) {
-  const { activeDataset } = useDataStore()
+  const { filteredDataset: activeDataset } = useDataStore()
   const cats = activeDataset ? categoryColumns(activeDataset) : []
   const nums = activeDataset ? numericColumns(activeDataset) : []
 

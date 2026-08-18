@@ -31,7 +31,21 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="pt-BR" className={`${geistSans.variable} ${geistMono.variable} bg-background`}>
+    <html
+      lang="pt-BR"
+      suppressHydrationWarning
+      className={`${geistSans.variable} ${geistMono.variable} bg-background`}
+    >
+      <head>
+        {/* Aplica o tema salvo antes da pintura para evitar flash (FOUC).
+            A escolha do usuário é soberana — sem preferência do sistema. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "(function(){try{var t=localStorage.getItem('radar_theme');if(t==='dark'){document.documentElement.classList.add('dark');}}catch(e){}})();",
+          }}
+        />
+      </head>
       <body className="font-sans antialiased">
         {children}
 

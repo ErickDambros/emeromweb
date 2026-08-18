@@ -36,7 +36,7 @@ function toDate(v: CellValue): Date | null {
 }
 
 export function AgendasView() {
-  const { activeDataset } = useDataStore()
+  const { filteredDataset: activeDataset } = useDataStore()
   const dates = activeDataset ? dateColumns(activeDataset) : []
   const cats = activeDataset ? categoryColumns(activeDataset) : []
 

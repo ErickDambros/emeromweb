@@ -1,8 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { FileDown, FileText, Printer } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { FileText, Printer } from "lucide-react"
 import {
   Select,
   SelectContent,
@@ -12,6 +11,13 @@ import {
 } from "@/components/ui/select"
 import { useDataStore } from "@/components/data-store"
 import { EmptyState } from "@/components/empty-state"
+import { ExportMenu } from "@/components/export-menu"
+import {
+  exportReportPdf,
+  exportReportXlsx,
+  reportToText,
+  type ReportData,
+} from "@/lib/export-utils"
 import {
   aggregateOne,
   categoryColumns,
@@ -26,7 +32,7 @@ import {
 const COUNT = "__count__"
 
 export function RelatoriosView() {
-  const { activeDataset, sources } = useDataStore()
+  const { filteredDataset: activeDataset, sources } = useDataStore()
   const cats = activeDataset ? categoryColumns(activeDataset) : []
   const nums = activeDataset ? numericColumns(activeDataset) : []
   const dates = activeDataset ? dateColumns(activeDataset) : []

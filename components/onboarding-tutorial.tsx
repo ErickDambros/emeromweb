@@ -306,6 +306,20 @@ export function OnboardingTutorial({ isOpen, onClose, onNavigateStep }: Onboardi
 
 /** Calcula a melhor posição na tela para o Card de instrução */
 function getCardPosition(rect: DOMRect | null, preferred = "right"): React.CSSProperties {
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768
+
+  // Em telas pequenas, ancoramos o card na base da tela com largura adaptativa
+  // (calc(100vw - 2rem)) para nunca vazar ou cortar o conteúdo.
+  if (isMobile) {
+    return {
+      bottom: "1rem",
+      left: "1rem",
+      right: "1rem",
+      width: "calc(100vw - 2rem)",
+      maxWidth: "calc(100vw - 2rem)",
+    }
+  }
+
   if (!rect) {
     return {
       top: "50%",

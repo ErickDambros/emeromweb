@@ -2,19 +2,14 @@
 
 import {
   AlertCircle,
-  AlertTriangle,
   ArrowLeft,
   Calendar,
   CheckCircle2,
   Clock,
   Coins,
   Copy,
-  ExternalLink,
   FileCheck,
-  FileDown,
-  FileText,
   History,
-  Layers,
   Printer,
   ShieldAlert,
   User,
@@ -23,9 +18,11 @@ import {
 import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ExportMenu } from "@/components/export-menu"
+import { dossierToText, exportDossierPdf, exportDossierXlsx } from "@/lib/export-utils"
 import type { ActionDossier, DocumentStatus } from "@/lib/types"
 
 interface ProntuarioViewProps {
@@ -82,10 +79,11 @@ export function ProntuarioView({ dossier, onBack }: ProntuarioViewProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button onClick={() => window.print()} className="gap-2" size="sm">
-            <FileDown className="size-4" />
-            Exportar Dossiê em PDF
-          </Button>
+          <ExportMenu
+            onPdf={() => exportDossierPdf(dossier)}
+            onExcel={() => exportDossierXlsx(dossier)}
+            buildText={() => dossierToText(dossier)}
+          />
         </div>
       </div>
 
@@ -275,7 +273,7 @@ export function ProntuarioView({ dossier, onBack }: ProntuarioViewProps) {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-lg border border-border">
+          <div className="scroll-touch overflow-x-auto rounded-lg border border-border">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/40 text-xs">
