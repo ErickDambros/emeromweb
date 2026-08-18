@@ -23,16 +23,16 @@ export function UniversalAccessIcon({ className, ...props }: SVGProps<SVGSVGElem
       <circle cx="12" cy="12" r="10" />
 
       {/* Cabeça do indivíduo */}
-      <circle cx="12" cy="6.8" r="1.3" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="6.5" r="1.5" fill="currentColor" stroke="none" />
 
       {/* Braços abertos em arco ascendente de alcance, dignidade e inclusão */}
-      <path d="M5.5 9.5c2.5 1.5 4.5 2 6.5 2s4-0.5 6.5-2" />
+      <path d="M5 9.5c2.5 1.5 4.5 2 7 2s4.5-0.5 7-2" />
 
       {/* Tronco */}
-      <path d="M12 11.5v3.5" />
+      <path d="M12 11.5v4" />
 
       {/* Pernas em postura estável e firme */}
-      <path d="m8.5 19.5 3.5-4.5 3.5 4.5" />
+      <path d="m8.5 20 3.5-4.5 3.5 4.5" />
     </svg>
   )
 }

@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react"
 import {
-  Accessibility,
   Eye,
   RotateCcw,
   Sun,
   X,
 } from "lucide-react"
+import { UniversalAccessIcon } from "@/components/icons/universal-access"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
@@ -51,7 +51,7 @@ export function AccessibilityMenu() {
           {/* Header */}
           <div className="flex items-center justify-between border-b border-border bg-muted/60 px-4 py-3">
             <div className="flex items-center gap-2">
-              <Accessibility className="size-4 text-primary" />
+              <UniversalAccessIcon className="size-4 text-primary" />
               <span className="text-xs font-semibold uppercase tracking-wider text-foreground">
                 Acessibilidade
               </span>
@@ -165,10 +165,10 @@ export function AccessibilityMenu() {
       <button
         onClick={() => setIsOpen((prev) => !prev)}
         aria-label={isOpen ? "Fechar Menu de Acessibilidade" : "Abrir Menu de Acessibilidade (Alto Contraste, Tamanho da Fonte)"}
-        className="flex size-11 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-md transition-transform hover:scale-105 hover:border-primary hover:text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+        className="flex size-11 items-center justify-center rounded-full border border-border bg-card text-foreground shadow-md transition-all hover:scale-105 hover:border-primary hover:text-primary hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
         title="Menu de Acessibilidade (Alto Contraste, Fonte)"
       >
-        <Accessibility className="size-5.5" />
+        <UniversalAccessIcon className="size-6" />
       </button>
     </div>
   )

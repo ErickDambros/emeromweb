@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { HelpCircle, MessageSquare, Send, Sparkles, X } from "lucide-react"
+import { MessageSquare, Send, Sparkles, X } from "lucide-react"
+import { AssistantAvatarIcon } from "@/components/icons/assistant-avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useDataStore } from "./data-store"
@@ -76,8 +77,8 @@ export function AssistantDrawer() {
           {/* Header */}
           <div className="flex items-center justify-between border-b border-border bg-primary px-4 py-3 text-primary-foreground">
             <div className="flex items-center gap-2.5">
-              <div className="flex size-8 items-center justify-center rounded-full bg-white/20 text-white">
-                <HelpCircle className="size-4" />
+              <div className="flex size-8 items-center justify-center rounded-full bg-white/20 p-0.5 text-white">
+                <AssistantAvatarIcon className="size-full" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
@@ -107,8 +108,13 @@ export function AssistantDrawer() {
               return (
                 <div
                   key={m.id}
-                  className={`flex ${isUser ? "justify-end" : "justify-start"}`}
+                  className={`flex items-start gap-2 ${isUser ? "justify-end" : "justify-start"}`}
                 >
+                  {!isUser && (
+                    <div className="mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                      <AssistantAvatarIcon className="size-5" />
+                    </div>
+                  )}
                   <div
                     className={`max-w-[85%] rounded-lg px-3.5 py-2.5 ${
                       isUser
@@ -184,10 +190,10 @@ export function AssistantDrawer() {
         id="tutorial-assistant-trigger"
         onClick={() => setIsOpen((prev) => !prev)}
         aria-label={isOpen ? "Fechar Assistente RADAR" : "Abrir Assistente RADAR Central de Ajuda"}
-        className="flex size-13 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+        className="flex size-13 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 p-2"
         title="Assistente RADAR · Central de Ajuda"
       >
-        {isOpen ? <X className="size-6" /> : <MessageSquare className="size-6" />}
+        {isOpen ? <X className="size-6" /> : <AssistantAvatarIcon className="size-full" />}
       </button>
     </div>
   )
