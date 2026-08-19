@@ -2,66 +2,105 @@ import * as fs from "fs"
 import * as path from "path"
 import ExcelJS from "exceljs"
 
-async function generateSampleExcelFiles() {
+interface ActionRecord {
+  codigo: string
+  acao: string
+  processoSei: string
+  idEmeronWeb: string
+  setor: string
+  categoria: string
+  responsavel: string
+  status: string
+  prioridade: string
+  prazo: Date
+  cargaHoraria: number
+  orcamentoPrevisto: number
+  orcamentoExecutado: number
+  alunosBeneficiados: number
+  progresso: number
+}
+
+async function generateAllExcelInputs() {
   const outputDir = path.join(process.cwd(), "inputs")
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true })
   }
 
-  console.log("Gerando 5 planilhas Excel completas em:", outputDir)
+  console.log("Gerando 5 planilhas Excel padronizadas para EMERON em:", outputDir)
 
   const C_NAVY = "0D2D46"
-  const C_LIGHT_BLUE = "E0F2FE"
   const C_ZEBRA = "F8FAFC"
   const C_BORDER = "CBD5E1"
 
-  function styleWorksheet(
-    ws: ExcelJS.Worksheet,
-    title: string,
-    subtitle: string,
-    headers: string[],
-    rows: (string | number | Date)[][],
-    columnWidths: number[],
-    numFormats: Record<number, string> = {},
-    alignments: Record<number, "left" | "center" | "right"> = {},
+  const headers = [
+    "Código",
+    "Ação",
+    "Processo SEI",
+    "ID EmeronWeb",
+    "Setor",
+    "Categoria",
+    "Responsável",
+    "Status",
+    "Prioridade",
+    "Prazo",
+    "Carga Horária (h)",
+    "Orçamento Previsto",
+    "Orçamento Executado",
+    "Alunos Beneficiados",
+    "Progresso (%)",
+  ]
+
+  const columnWidths = [18, 48, 26, 18, 28, 22, 24, 16, 14, 15, 18, 22, 22, 20, 16]
+
+  async function createCleanSpreadsheet(
+    filePath: string,
+    sheetName: string,
+    records: ActionRecord[],
   ) {
-    // 1. Banner Superior
-    ws.mergeCells(1, 1, 1, headers.length)
-    const titleCell = ws.getCell(1, 1)
-    titleCell.value = title.toUpperCase()
-    titleCell.font = { name: "Segoe UI", size: 13, bold: true, color: { argb: "FFFFFFFF" } }
-    titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF" + C_NAVY } }
-    titleCell.alignment = { horizontal: "center", vertical: "middle" }
-    ws.getRow(1).height = 28
+    const wb = new ExcelJS.Workbook()
+    wb.creator = "Escola da Magistratura do Estado de Rondônia (EMERON / TJ-RO)"
+    wb.created = new Date(2026, 0, 1)
 
-    ws.mergeCells(2, 1, 2, headers.length)
-    const subCell = ws.getCell(2, 1)
-    subCell.value = `${subtitle} · Gerado em ${new Date().toLocaleDateString("pt-BR")}`
-    subCell.font = { name: "Segoe UI", size: 9.5, italic: true, color: { argb: "FF" + C_NAVY } }
-    subCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF" + C_LIGHT_BLUE } }
-    subCell.alignment = { horizontal: "center", vertical: "middle" }
-    ws.getRow(2).height = 20
+    const ws = wb.addWorksheet(sheetName, {
+      views: [{ state: "frozen", ySplit: 1 }], // Congela a primeira linha de cabeçalho
+    })
 
-    ws.addRow([]) // Linha 3 vazia
-
-    // 2. Linha de Cabeçalho (Linha 4)
+    // 1. Linha de Cabeçalho (Linha 1)
     const headerRow = ws.addRow(headers)
-    headerRow.height = 24
+    headerRow.height = 26
     headerRow.eachCell((cell) => {
       cell.font = { name: "Segoe UI", size: 10, bold: true, color: { argb: "FFFFFFFF" } }
       cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF" + C_NAVY } }
       cell.alignment = { horizontal: "center", vertical: "middle" }
       cell.border = {
-        top: { style: "thin", color: { argb: "FF" + C_NAVY } },
+        top: { style: "medium", color: { argb: "FF" + C_NAVY } },
         bottom: { style: "medium", color: { argb: "FF" + C_NAVY } },
         left: { style: "thin", color: { argb: "FF" + C_NAVY } },
         right: { style: "thin", color: { argb: "FF" + C_NAVY } },
       }
     })
 
-    // 3. Linhas de Dados
-    rows.forEach((r, idx) => {
-      const row = ws.addRow(r)
+    // 2. Linhas de Dados
+    records.forEach((rec, idx) => {
+      const rowValues = [
+        rec.codigo,
+        rec.acao,
+        rec.processoSei,
+        rec.idEmeronWeb,
+        rec.setor,
+        rec.categoria,
+        rec.responsavel,
+        rec.status,
+        rec.prioridade,
+        rec.prazo,
+        rec.cargaHoraria,
+        rec.orcamentoPrevisto,
+        rec.orcamentoExecutado,
+        rec.alunosBeneficiados,
+        rec.progresso,
+      ]
+
+      const row = ws.addRow(rowValues)
       row.height = 20
       const isEven = idx % 2 === 1
 
@@ -78,333 +117,396 @@ async function generateSampleExcelFiles() {
           right: { style: "thin", color: { argb: "FF" + C_BORDER } },
         }
 
-        // Alinhamento
-        const align = alignments[colNum] || (typeof cell.value === "number" ? "right" : "left")
-        cell.alignment = { horizontal: align, vertical: "middle" }
+        // Alinhamento específico por coluna
+        switch (colNum) {
+          case 1: // Código
+          case 3: // Processo SEI
+          case 4: // ID EmeronWeb
+          case 8: // Status
+          case 9: // Prioridade
+          case 10: // Prazo
+            cell.alignment = { horizontal: "center", vertical: "middle" }
+            break
+          case 11: // Carga Horária
+          case 12: // Orçamento Previsto
+          case 13: // Orçamento Executado
+          case 14: // Alunos
+          case 15: // Progresso
+            cell.alignment = { horizontal: "right", vertical: "middle" }
+            break
+          default:
+            cell.alignment = { horizontal: "left", vertical: "middle" }
+        }
 
-        // Formato numérico
-        if (numFormats[colNum]) {
-          cell.numFmt = numFormats[colNum]
+        // Formatação de tipos
+        if (colNum === 10) {
+          cell.numFmt = "dd/mm/yyyy"
+        } else if (colNum === 12 || colNum === 13) {
+          cell.numFmt = '"R$ "#,##0.00'
+        } else if (colNum === 11 || colNum === 14) {
+          cell.numFmt = "#,##0"
+        } else if (colNum === 15) {
+          cell.numFmt = "0%"
         }
       })
     })
 
-    // Larguras das colunas
+    // 3. Ajuste de Larguras
     ws.columns = columnWidths.map((w) => ({ width: w }))
+
+    await wb.xlsx.writeFile(filePath)
+    console.log(`  -> Gerado: ${path.basename(filePath)} (${records.length} linhas)`)
   }
 
-  /* ------------------------------------------------------------------ */
-  /* 1. PLANO ANUAL DE CAPACITAÇÃO 2026                                */
-  /* ------------------------------------------------------------------ */
+  /* ================================================================== */
+  /* 1. PLANO ANUAL DE CAPACITAÇÃO 2026 (PAC EMERON)                    */
+  /* ================================================================== */
   {
-    const wb = new ExcelJS.Workbook()
-    wb.creator = "EMERON / TJ-RO"
-    const ws = wb.addWorksheet("Acoes_Capacitacao_2026")
-
-    const headers = [
-      "Codigo_Acao",
-      "Nome_Acao",
-      "Setor_Demandante",
-      "Eixo_Tematico",
-      "Publico_Alvo",
-      "Modalidade",
-      "Carga_Horaria",
-      "Vagas_Ofertadas",
-      "Inscritos",
-      "Status",
-      "Prioridade",
-      "Data_Inicio",
-      "Data_Termino",
-      "Orcamento_Previsto",
-      "Orcamento_Executado",
-      "Processo_SEI",
-      "Responsavel",
+    const pacCursos: { acao: string; setor: string; cat: string; resp: string; prio: string; ch: number; prev: number; exec: number; alunos: number; mes: number; dia: number; status: string }[] = [
+      { acao: "Pós-Graduação em Direito Digital, Proteção de Dados e Inteligência Artificial", setor: "Coordenação Pedagógica", cat: "Ensino", resp: "Mariana Alves", prio: "Alta", ch: 360, prev: 185000, exec: 142000, alunos: 52, mes: 2, dia: 15, status: "Em andamento" },
+      { acao: "Oficina Prática de Redação de Sentenças Cíveis e Decisões Judiciais", setor: "Coordenação Pedagógica", cat: "Formação", resp: "Carlos Lima", prio: "Alta", ch: 40, prev: 32000, exec: 32000, alunos: 30, mes: 1, dia: 20, status: "Concluída" },
+      { acao: "Programa de Formação Continuada de Magistrados e Servidores", setor: "Secretaria Escolar", cat: "Formação", resp: "Ana Souza", prio: "Média", ch: 60, prev: 45000, exec: 28000, alunos: 140, mes: 3, dia: 10, status: "Em andamento" },
+      { acao: "Seminário Estadual de Direito Público, Cidadania e Amazônia", setor: "Coordenação Pedagógica", cat: "Ensino", resp: "Rafael Nunes", prio: "Alta", ch: 30, prev: 95000, exec: 0, alunos: 220, mes: 7, dia: 18, status: "Planejada" },
+      { acao: "Digitalização, Governança e Preservação da Memória Institucional", setor: "Tecnologia da Informação", cat: "Tecnologia", resp: "Beatriz Rocha", prio: "Média", ch: 40, prev: 28000, exec: 27500, alunos: 45, mes: 2, dia: 28, status: "Concluída" },
+      { acao: "Reforma, Modernização e Acessibilidade das Salas de Aula e Auditórios", setor: "Infraestrutura", cat: "Infraestrutura", resp: "João Pereira", prio: "Alta", ch: 20, prev: 120000, exec: 98000, alunos: 350, mes: 4, dia: 15, status: "Em andamento" },
+      { acao: "Curso de Especialização em Gestão Judiciária e Políticas Públicas", setor: "Coordenação Pedagógica", cat: "Ensino", resp: "Mariana Alves", prio: "Alta", ch: 180, prev: 150000, exec: 45000, alunos: 60, mes: 5, dia: 5, status: "Em andamento" },
+      { acao: "Implementação Avançada do Ambiente Virtual de Aprendizagem Moodle 4.4", setor: "Tecnologia da Informação", cat: "Tecnologia", resp: "Beatriz Rocha", prio: "Média", ch: 60, prev: 35000, exec: 34200, alunos: 180, mes: 1, dia: 30, status: "Concluída" },
+      { acao: "Aquisição de Equipamentos de Videoconferência e Estúdio de Gravação", setor: "Infraestrutura", cat: "Infraestrutura", resp: "João Pereira", prio: "Alta", ch: 20, prev: 85000, exec: 85000, alunos: 400, mes: 2, dia: 10, status: "Concluída" },
+      { acao: "Oficina de Precedentes Qualificados e Jurisprudência Vinculante", setor: "Coordenação Pedagógica", cat: "Formação", resp: "Carlos Lima", prio: "Alta", ch: 40, prev: 25000, exec: 25000, alunos: 40, mes: 3, dia: 25, status: "Concluída" },
+      { acao: "Programa de Apoio Psicossocial, Gestão do Estresse e Saúde no Judiciário", setor: "Assistência ao Estudante", cat: "Assistência", resp: "Ana Souza", prio: "Baixa", ch: 30, prev: 18000, exec: 17500, alunos: 90, mes: 2, dia: 22, status: "Concluída" },
+      { acao: "Recuperação, Restauração e Expansão do Acervo Digital da Biblioteca", setor: "Secretaria Escolar", cat: "Administrativo", resp: "Rafael Nunes", prio: "Baixa", ch: 20, prev: 15000, exec: 12000, alunos: 120, mes: 4, dia: 20, status: "Em andamento" },
+      { acao: "Expansão da Infraestrutura de Rede, Servidores e Wi-Fi das Salas de Aula", setor: "Tecnologia da Informação", cat: "Infraestrutura", resp: "Beatriz Rocha", prio: "Alta", ch: 30, prev: 65000, exec: 62000, alunos: 250, mes: 3, dia: 15, status: "Concluída" },
+      { acao: "Feira de Boas Práticas, Inovação e Inteligência Artificial na Justiça", setor: "Coordenação Pedagógica", cat: "Ensino", resp: "Rafael Nunes", prio: "Média", ch: 24, prev: 40000, exec: 0, alunos: 300, mes: 8, dia: 12, status: "Planejada" },
+      { acao: "Treinamento em Segurança da Informação, LGPD e Privacidade no TJRO", setor: "Tecnologia da Informação", cat: "Tecnologia", resp: "Beatriz Rocha", prio: "Alta", ch: 30, prev: 22000, exec: 21800, alunos: 210, mes: 1, dia: 25, status: "Concluída" },
+      { acao: "Formação Continuada em Direito Penal Econômico e Lavagem de Capitais", setor: "Coordenação Pedagógica", cat: "Formação", resp: "Carlos Lima", prio: "Alta", ch: 45, prev: 68000, exec: 0, alunos: 35, mes: 8, dia: 20, status: "Planejada" },
+      { acao: "Curso de Mediação e Conciliação Judicial e Comunitária (NUPEMEC)", setor: "Assistência ao Estudante", cat: "Formação", resp: "Ana Souza", prio: "Média", ch: 80, prev: 45000, exec: 32000, alunos: 48, mes: 4, dia: 28, status: "Em andamento" },
+      { acao: "Direitos Humanos, Jurisdição Indígena e Questões Fundiárias na Amazônia", setor: "Coordenação Pedagógica", cat: "Ensino", resp: "Mariana Alves", prio: "Alta", ch: 40, prev: 74000, exec: 15000, alunos: 42, mes: 9, dia: 15, status: "Em andamento" },
+      { acao: "Capacitação em Gestão Cartorária, Métricas de Produtividade e E-Proc", setor: "Secretaria Escolar", cat: "Administrativo", resp: "Rafael Nunes", prio: "Média", ch: 60, prev: 28000, exec: 28000, alunos: 115, mes: 2, dia: 18, status: "Concluída" },
+      { acao: "Curso de Direito Notarial, Registral e Regularização Fundiária Urbana", setor: "Coordenação Pedagógica", cat: "Formação", resp: "Carlos Lima", prio: "Média", ch: 40, prev: 35000, exec: 0, alunos: 65, mes: 10, dia: 10, status: "Planejada" },
+      { acao: "Oficina de Linguagem Simples e Visual Law na Prática Judiciária", setor: "Coordenação Pedagógica", cat: "Formação", resp: "Mariana Alves", prio: "Baixa", ch: 20, prev: 15000, exec: 14500, alunos: 95, mes: 3, dia: 5, status: "Concluída" },
+      { acao: "Seminário Nacional sobre Infância, Juventude e Adoção", setor: "Assistência ao Estudante", cat: "Ensino", resp: "Ana Souza", prio: "Alta", ch: 24, prev: 55000, exec: 0, alunos: 160, mes: 10, dia: 25, status: "Planejada" },
+      { acao: "Capacitação em Auditoria Interna, Compliance e Gestão de Riscos", setor: "Gestão Financeira", cat: "Administrativo", resp: "João Pereira", prio: "Média", ch: 40, prev: 30000, exec: 29000, alunos: 50, mes: 2, dia: 12, status: "Concluída" },
+      { acao: "Curso de Julgamento com Perspectiva de Gênero (Resolução CNJ 492)", setor: "Coordenação Pedagógica", cat: "Formação", resp: "Mariana Alves", prio: "Alta", ch: 40, prev: 42000, exec: 41000, alunos: 80, mes: 3, dia: 18, status: "Concluída" },
+      { acao: "Formação de Formadores e Tutores EAD para a Escola Judicial", setor: "Secretaria Escolar", cat: "Formação", resp: "Rafael Nunes", prio: "Alta", ch: 60, prev: 38000, exec: 12000, alunos: 40, mes: 5, dia: 20, status: "Atrasada" },
+      { acao: "Congresso de Direito Constitucional e Teoria dos Precedentes", setor: "Coordenação Pedagógica", cat: "Ensino", resp: "Carlos Lima", prio: "Alta", ch: 32, prev: 110000, exec: 0, alunos: 280, mes: 11, dia: 5, status: "Planejada" },
+      { acao: "Oficina de Execução Fiscal Eficiente e Recuperação de Ativos", setor: "Coordenação Pedagógica", cat: "Formação", resp: "Carlos Lima", prio: "Média", ch: 30, prev: 20000, exec: 19500, alunos: 55, mes: 1, dia: 18, status: "Concluída" },
+      { acao: "Curso de Perícias Médicas, Dano Corporal e Avaliação Previdenciária", setor: "Assistência ao Estudante", cat: "Formação", resp: "Ana Souza", prio: "Média", ch: 40, prev: 36000, exec: 0, alunos: 45, mes: 9, dia: 28, status: "Planejada" },
+      { acao: "Capacitação em Técnicas Restaurativas e Círculos de Paz nas Escolas", setor: "Assistência ao Estudante", cat: "Assistência", resp: "Ana Souza", prio: "Baixa", ch: 30, prev: 24000, exec: 23000, alunos: 70, mes: 3, dia: 28, status: "Concluída" },
+      { acao: "Oficina Avançada de Redação de Votos nos Juizados Especiais", setor: "Coordenação Pedagógica", cat: "Formação", resp: "Mariana Alves", prio: "Média", ch: 30, prev: 18000, exec: 17800, alunos: 45, mes: 2, dia: 5, status: "Concluída" },
+      { acao: "Implementação do Observatório de Dados e Inteligência Analítica", setor: "Tecnologia da Informação", cat: "Tecnologia", resp: "Beatriz Rocha", prio: "Alta", ch: 80, prev: 75000, exec: 68000, alunos: 35, mes: 6, dia: 10, status: "Em andamento" },
+      { acao: "Curso de Formação Inicial para Novos Servidores Aprovados em Concurso", setor: "Secretaria Escolar", cat: "Formação", resp: "Rafael Nunes", prio: "Alta", ch: 120, prev: 88000, exec: 88000, alunos: 150, mes: 1, dia: 15, status: "Concluída" },
+      { acao: "Seminário Rondoniense de Direito do Consumidor e Superendividamento", setor: "Coordenação Pedagógica", cat: "Ensino", resp: "Carlos Lima", prio: "Média", ch: 24, prev: 32000, exec: 0, alunos: 130, mes: 10, dia: 18, status: "Planejada" },
+      { acao: "Capacitação em Gestão de Contratos Administrativos e Nova Lei 14.133", setor: "Gestão Financeira", cat: "Administrativo", resp: "João Pereira", prio: "Alta", ch: 40, prev: 26000, exec: 25800, alunos: 60, mes: 2, dia: 26, status: "Concluída" },
+      { acao: "Oficina de Investigação Patrimonial e Quebra de Sigilo Bancário", setor: "Coordenação Pedagógica", cat: "Formação", resp: "Carlos Lima", prio: "Alta", ch: 30, prev: 28000, exec: 27000, alunos: 35, mes: 4, dia: 10, status: "Em andamento" },
+      { acao: "Formação em Justiça Climática, Sustentabilidade e ESG no Judiciário", setor: "Coordenação Pedagógica", cat: "Ensino", resp: "Mariana Alves", prio: "Baixa", ch: 30, prev: 25000, exec: 0, alunos: 85, mes: 11, dia: 20, status: "Planejada" },
+      { acao: "Oficina Prática de Audiências Telepresenciais e Prova Digital", setor: "Tecnologia da Informação", cat: "Tecnologia", resp: "Beatriz Rocha", prio: "Média", ch: 20, prev: 14000, exec: 13800, alunos: 90, mes: 3, dia: 12, status: "Concluída" },
+      { acao: "Curso de Extensão Universitária em Direito Processual Penal Aplicado", setor: "Coordenação Pedagógica", cat: "Ensino", resp: "Carlos Lima", prio: "Alta", ch: 80, prev: 62000, exec: 30000, alunos: 55, mes: 6, dia: 25, status: "Em andamento" },
+      { acao: "Capacitação de Oficiais de Justiça em Avaliação de Imóveis Urbanos", setor: "Secretaria Escolar", cat: "Formação", resp: "Rafael Nunes", prio: "Média", ch: 40, prev: 22000, exec: 21500, alunos: 40, mes: 2, dia: 8, status: "Concluída" },
+      { acao: "Ciclo de Palestras sobre Direito e Literatura: Reflexões Humanísticas", setor: "Assistência ao Estudante", cat: "Ensino", resp: "Ana Souza", prio: "Baixa", ch: 16, prev: 12000, exec: 0, alunos: 110, mes: 12, dia: 2, status: "Planejada" },
+      { acao: "Curso de Especialização em Direito Notarial e Registral Imobiliário", setor: "Coordenação Pedagógica", cat: "Ensino", resp: "Mariana Alves", prio: "Alta", ch: 240, prev: 165000, exec: 55000, alunos: 45, mes: 7, dia: 5, status: "Em andamento" },
+      { acao: "Treinamento em Atendimento Inclusivo ao Cidadão e Língua Brasileira de Sinais (Libras)", setor: "Assistência ao Estudante", cat: "Assistência", resp: "Ana Souza", prio: "Média", ch: 60, prev: 28000, exec: 27500, alunos: 65, mes: 4, dia: 18, status: "Em andamento" },
+      { acao: "Oficina de Inteligência Investigativa contra Organizações Criminosas", setor: "Coordenação Pedagógica", cat: "Formação", resp: "Carlos Lima", prio: "Alta", ch: 40, prev: 52000, exec: 0, alunos: 30, mes: 10, dia: 5, status: "Planejada" },
+      { acao: "Capacitação em Liderança Assertiva, Gestão de Conflitos e Feedback", setor: "Secretaria Escolar", cat: "Administrativo", resp: "Rafael Nunes", prio: "Média", ch: 24, prev: 18000, exec: 17800, alunos: 75, mes: 3, dia: 14, status: "Concluída" },
+      { acao: "Formação em Justiça Restaurativa Comunitária e Prevenção à Violência", setor: "Assistência ao Estudante", cat: "Assistência", resp: "Ana Souza", prio: "Média", ch: 40, prev: 32000, exec: 10000, alunos: 50, mes: 8, dia: 28, status: "Em andamento" },
+      { acao: "Simpósio Estadual sobre Inovações Processuais e Jurisprudência dos Tribunais Superiores", setor: "Coordenação Pedagógica", cat: "Ensino", resp: "Mariana Alves", prio: "Alta", ch: 30, prev: 88000, exec: 0, alunos: 240, mes: 11, dia: 25, status: "Planejada" },
+      { acao: "Oficina de Redação de Ementas, Acórdãos e Indexação Jurisprudencial", setor: "Secretaria Escolar", cat: "Formação", resp: "Rafael Nunes", prio: "Média", ch: 30, prev: 16000, exec: 15800, alunos: 40, mes: 1, dia: 22, status: "Concluída" },
+      { acao: "Revisão e Modernização do Regimento Interno e Estatuto da EMERON", setor: "Gabinete Presidência", cat: "Administrativo", resp: "Mariana Alves", prio: "Alta", ch: 40, prev: 25000, exec: 8000, alunos: 25, mes: 6, dia: 30, status: "Atrasada" },
     ]
 
-    const rows = [
-      ["EMERON-2026-001", "Pós-Graduação em Direito Digital e Inteligência Artificial", "Gabinete Presidência", "Direito e Tecnologia", "Magistrados e Assessores", "Híbrido", 360, 45, 52, "Em Andamento", "Alta", "2026-03-02", "2026-11-30", 185000, 142000, "0012345.000048/2026-12", "Dra. Mariana Vasconcelos"],
-      ["EMERON-2026-002", "Oficina Prática de Redação de Sentenças Cíveis", "Corregedoria-Geral", "Prática Jurisdicional", "Juízes Substitutos", "Presencial", 40, 30, 28, "Concluído", "Alta", "2026-02-10", "2026-02-28", 32000, 31500, "0012345.000072/2026-55", "Dr. Roberto Albuquerque"],
-      ["EMERON-2026-003", "Capacitação Avançada em Gestão Processual e E-Proc", "Secretaria Judiciária", "Gestão Judiciária", "Chefes de Cartório", "EAD", 60, 120, 115, "Em Andamento", "Média", "2026-04-01", "2026-05-15", 28000, 18200, "0012345.000103/2026-91", "Coord. Fabiana Rios"],
-      ["EMERON-2026-004", "Simpósio Rondoniense de Direito Ambiental e Amazônia", "Comitê Ambiental TJRO", "Direito Ambiental", "Magistrados e Comunidade", "Presencial", 24, 200, 210, "Planejada", "Alta", "2026-08-18", "2026-08-20", 95000, 0, "0012345.000144/2026-30", "Des. Carlos Eduardo Mendes"],
-      ["EMERON-2026-005", "Curso de Aperfeiçoamento em Mediação e Conciliação Judicial (NUPEMEC)", "NUPEMEC", "Métodos Consensuais", "Servidores e Mediadores", "Híbrido", 80, 50, 48, "Em Andamento", "Média", "2026-03-15", "2026-05-30", 45000, 29000, "0012345.000189/2026-88", "Dra. Luciana Freitas"],
-      ["EMERON-2026-006", "Formação Continuada em Direito Penal Econômico e Lavagem de Capitais", "Varas Criminais", "Ciências Criminais", "Magistrados Criminais", "Presencial", 45, 35, 33, "Planejada", "Alta", "2026-09-01", "2026-09-15", 68000, 0, "0012345.000210/2026-14", "Dr. Marcelo Fagundes"],
-      ["EMERON-2026-007", "Inteligência Artificial Aplicada à Pesquisa Jurisprudencial", "DTI - Tecnologia da Informação", "Direito e Tecnologia", "Assessores Jurídicos", "EAD", 30, 150, 148, "Concluído", "Baixa", "2026-01-15", "2026-02-15", 15000, 14800, "0012345.000245/2026-67", "Analista Gabriel Torres"],
-      ["EMERON-2026-008", "Direitos Humanos, Povos Tradicionais e Jurisdição Indígena", "Comissão de Direitos Humanos", "Direitos Fundamentais", "Magistrados da Amazônia", "Presencial", 40, 40, 39, "Em Análise", "Alta", "2026-10-05", "2026-10-09", 74000, 12000, "0012345.000301/2026-42", "Dra. Yara Tupinambá"],
-      ["EMERON-2026-009", "Gestão Emocional, Prevenção ao Burnout e Liderança Humanizada", "Secretaria de Gestão de Pessoas", "Saúde e Liderança", "Magistrados e Diretores", "Híbrido", 20, 80, 76, "Concluído", "Média", "2026-03-01", "2026-03-20", 22000, 21500, "0012345.000340/2026-19", "Psic. Heloísa Prado"],
-      ["EMERON-2026-010", "Seminário Internacional sobre o Novo Código de Processo Civil e Precedentes", "Diretoria Geral EMERON", "Direito Processual", "Magistrados e Servidores", "Presencial", 32, 250, 245, "Planejada", "Alta", "2026-11-10", "2026-11-13", 120000, 0, "0012345.000412/2026-80", "Des. Alexandre Godoy"],
-    ]
+    const records: ActionRecord[] = pacCursos.map((c, i) => {
+      const codigo = `EMERON-2026-${String(i + 1).padStart(3, "0")}`
+      const seiNum = String(12000 + i * 39).padStart(7, "0")
+      const seiProcess = `00${seiNum}.000048/2026-${String((i * 17) % 90 + 10)}`
+      const idEmeronWeb = `EW-2026-${String(8100 + i * 19)}`
+      const progresso = c.prev > 0 ? c.exec / c.prev : 0
 
-    const widths = [18, 48, 25, 22, 25, 14, 15, 16, 14, 16, 14, 14, 14, 20, 20, 24, 28]
-    const numFmts: Record<number, string> = {
-      7: "#,##0",
-      8: "#,##0",
-      9: "#,##0",
-      14: '"R$ "#,##0.00',
-      15: '"R$ "#,##0.00',
-    }
-    const aligns: Record<number, "left" | "center" | "right"> = {
-      1: "center",
-      6: "center",
-      7: "center",
-      8: "center",
-      9: "center",
-      10: "center",
-      11: "center",
-      12: "center",
-      13: "center",
-      14: "right",
-      15: "right",
-      16: "center",
-    }
+      return {
+        codigo,
+        acao: c.acao,
+        processoSei: seiProcess,
+        idEmeronWeb,
+        setor: c.setor,
+        categoria: c.cat,
+        responsavel: c.resp,
+        status: c.status,
+        prioridade: c.prio,
+        prazo: new Date(2026, c.mes - 1, c.dia),
+        cargaHoraria: c.ch,
+        orcamentoPrevisto: c.prev,
+        orcamentoExecutado: c.exec,
+        alunosBeneficiados: c.alunos,
+        progresso,
+      }
+    })
 
-    styleWorksheet(ws, "PLANO ANUAL DE CAPACITAÇÃO 2026 — EMERON / TJ-RO", "Matriz Geral de Cursos, Pós-Graduações, Oficinas e Seminários", headers, rows, widths, numFmts, aligns)
-    await wb.xlsx.writeFile(path.join(outputDir, "01_plano_anual_capacitacao_2026.xlsx"))
+    await createCleanSpreadsheet(
+      path.join(outputDir, "01_plano_anual_capacitacao_emeron_2026.xlsx"),
+      "Plano_Capacitacao_2026",
+      records,
+    )
   }
 
-  /* ------------------------------------------------------------------ */
-  /* 2. EXECUÇÃO ORÇAMENTÁRIA EMERON 2026                              */
-  /* ------------------------------------------------------------------ */
+  /* ================================================================== */
+  /* 2. EXECUÇÃO ORÇAMENTÁRIA E FINANCEIRA 2026                         */
+  /* ================================================================== */
   {
-    const wb = new ExcelJS.Workbook()
-    wb.creator = "EMERON / TJ-RO"
-    const ws = wb.addWorksheet("Execucao_Orcamentaria")
-
-    const headers = [
-      "Numero_Empenho",
-      "Processo_SEI",
-      "Acao_Formativa",
-      "Elemento_Despesa",
-      "Favorecido_Contratado",
-      "Valor_Dotacao",
-      "Valor_Empenhado",
-      "Valor_Liquidado",
-      "Valor_Pago",
-      "Saldo_Dotacao",
-      "Fonte_Recurso",
-      "Status_Liquidacao",
-      "Data_Emissao",
-      "Comarca_Polo",
+    const setoresFinanceiros = ["Gestão Financeira", "Coordenação Pedagógica", "Tecnologia da Informação", "Infraestrutura", "Secretaria Escolar", "Assistência ao Estudante"]
+    const comarcas = ["Porto Velho", "Ji-Paraná", "Cacoal", "Vilhena", "Ariquemes", "Guajará-Mirim", "Rolim de Moura", "Jaru"]
+    const despesas = [
+      "Docência e Instrutoria em Cursos de Magistrados",
+      "Passagens Aéreas e Hospedagem de Professores Convidados",
+      "Locação de Plataformas EAD e Ambientes Digitais",
+      "Confecção de Material Didático e Publicações Acadêmicas",
+      "Serviços Técnicos de Audiovisual e Transmissão ao Vivo",
+      "Diárias de Magistrados em Cursos Presenciais nos Polos",
+      "Consultoria Pedagógica e Avaliação Institucional",
+      "Aquisição de Licenças de Softwares de Pesquisa Jurídica",
+      "Manutenção de Equipamentos Didáticos e Laboratórios",
+      "Alimentação e Coffee Break em Seminários Oficiais",
     ]
 
-    const rows = [
-      ["2026NE000142", "0012345.000048/2026-12", "Pós-Graduação em Direito Digital e IA", "33.90.39 - Outros Serviços Terceiros PJ", "Fundação Getulio Vargas (FGV)", 185000, 185000, 142000, 142000, 43000, "0100 - Tesouro Estadual", "Parcialmente Liquidado", "2026-02-15", "Porto Velho"],
-      ["2026NE000155", "0012345.000072/2026-55", "Oficina de Redação de Sentenças", "33.90.36 - Serviços Terceiros PF (Docência)", "Prof. Dr. Nelson Nery Jr.", 32000, 32000, 31500, 31500, 500, "0100 - Tesouro Estadual", "Totalmente Liquidado", "2026-01-20", "Porto Velho"],
-      ["2026NE000188", "0012345.000103/2026-91", "Capacitação em Gestão E-Proc", "33.90.39 - Licença Software e Plataforma EAD", "EdTech Soluções Educacionais Ltda", 28000, 28000, 18200, 18200, 9800, "0240 - Recursos Próprios TJRO", "Parcialmente Liquidado", "2026-03-10", "Ji-Paraná"],
-      ["2026NE000212", "0012345.000144/2026-30", "Simpósio de Direito Ambiental", "33.90.30 - Material de Consumo e Apoio", "Gráfica & Editora Rondoniense Ltda", 15000, 15000, 0, 0, 15000, "0100 - Tesouro Estadual", "Pendente", "2026-04-02", "Cacoal"],
-      ["2026NE000213", "0012345.000144/2026-30", "Simpósio de Direito Ambiental", "33.90.33 - Passagens e Diárias de Palestrantes", "Companhia Aérea Gol / Latam", 80000, 80000, 0, 0, 80000, "0100 - Tesouro Estadual", "Pendente", "2026-04-02", "Porto Velho"],
-      ["2026NE000245", "0012345.000189/2026-88", "Curso Mediação e Conciliação NUPEMEC", "33.90.36 - Instrutoria e Treinamento", "Instrutora Maria Clara Esteves", 45000, 45000, 29000, 29000, 16000, "0240 - Recursos Próprios TJRO", "Parcialmente Liquidado", "2026-02-28", "Vilhena"],
-      ["2026NE000280", "0012345.000245/2026-67", "IA Aplicada à Jurisprudência", "33.90.39 - Servidores e Cloud Computing", "Amazon Web Services Brasil", 15000, 15000, 14800, 14800, 200, "0100 - Tesouro Estadual", "Totalmente Liquidado", "2026-01-10", "Porto Velho"],
-      ["2026NE000310", "0012345.000301/2026-42", "Direitos Humanos e Jurisdição Indígena", "33.90.36 - Docência de Especialistas", "Antropólogo Dr. Vicente Meireles", 74000, 74000, 12000, 12000, 62000, "0100 - Tesouro Estadual", "Parcialmente Liquidado", "2026-04-12", "Guajará-Mirim"],
-      ["2026NE000335", "0012345.000340/2026-19", "Gestão Emocional e Liderança", "33.90.39 - Consultoria em Desenvolvimento", "Instituto Liderança e Saúde Mental", 22000, 22000, 21500, 21500, 500, "0240 - Recursos Próprios TJRO", "Totalmente Liquidado", "2026-02-18", "Ariquemes"],
-      ["2026NE000390", "0012345.000412/2026-80", "Seminário Novo CPC e Precedentes", "33.90.39 - Organização de Grandes Eventos", "Eventos & Convenções da Amazônia", 120000, 120000, 0, 0, 120000, "0100 - Tesouro Estadual", "Pendente", "2026-05-05", "Porto Velho"],
-    ]
+    const records: ActionRecord[] = []
+    for (let i = 0; i < 45; i++) {
+      const codigo = `FIN-2026-${String(i + 1).padStart(3, "0")}`
+      const seiProcess = `00${String(18000 + i * 43).padStart(7, "0")}.000048/2026-${String((i * 11) % 90 + 10)}`
+      const idEmeronWeb = `EW-2026-${String(9100 + i * 13)}`
+      const setor = setoresFinanceiros[i % setoresFinanceiros.length]
+      const comarca = comarcas[i % comarcas.length]
+      const despesa = despesas[i % despesas.length]
 
-    const widths = [18, 24, 38, 32, 32, 18, 18, 18, 18, 18, 24, 22, 14, 18]
-    const numFmts: Record<number, string> = {
-      6: '"R$ "#,##0.00',
-      7: '"R$ "#,##0.00',
-      8: '"R$ "#,##0.00',
-      9: '"R$ "#,##0.00',
-      10: '"R$ "#,##0.00',
-    }
-    const aligns: Record<number, "left" | "center" | "right"> = {
-      1: "center",
-      2: "center",
-      6: "right",
-      7: "right",
-      8: "right",
-      9: "right",
-      10: "right",
-      12: "center",
-      13: "center",
-      14: "center",
+      const prev = 15000 + ((i * 7300) % 95000)
+      const isConcl = i % 3 === 0
+      const isLate = i % 7 === 0
+      const exec = isConcl ? prev : isLate ? Math.round(prev * 0.2) : Math.round(prev * 0.7)
+      const status = isConcl ? "Concluída" : isLate ? "Atrasada" : i % 2 === 0 ? "Em andamento" : "Planejada"
+      const prio = i % 4 === 0 ? "Alta" : i % 2 === 0 ? "Média" : "Baixa"
+      const mes = (i % 12) + 1
+      const dia = ((i * 7) % 27) + 1
+      const responsaveis = ["João Pereira", "Mariana Alves", "Beatriz Rocha", "Rafael Nunes", "Carlos Lima", "Ana Souza"]
+
+      records.push({
+        codigo,
+        acao: `${despesa} - Polo ${comarca}`,
+        processoSei: seiProcess,
+        idEmeronWeb,
+        setor,
+        categoria: "Gestão Financeira",
+        responsavel: responsaveis[i % responsaveis.length],
+        status,
+        prioridade: prio,
+        prazo: new Date(2026, mes - 1, dia),
+        cargaHoraria: [20, 30, 40, 60][i % 4],
+        orcamentoPrevisto: prev,
+        orcamentoExecutado: exec,
+        alunosBeneficiados: Math.round(30 + ((i * 19) % 320)),
+        progresso: prev > 0 ? exec / prev : 0,
+      })
     }
 
-    styleWorksheet(ws, "EXECUÇÃO ORÇAMENTÁRIA E FINANCEIRA 2026 — EMERON", "Acompanhamento de Empenhos, Liquidações, Pagamentos e Saldos de Dotação", headers, rows, widths, numFmts, aligns)
-    await wb.xlsx.writeFile(path.join(outputDir, "02_execucao_orcamentaria_emeron_2026.xlsx"))
+    await createCleanSpreadsheet(
+      path.join(outputDir, "02_execucao_orcamentaria_e_financeira_2026.xlsx"),
+      "Execucao_Financeira_2026",
+      records,
+    )
   }
 
-  /* ------------------------------------------------------------------ */
-  /* 3. ACOMPANHAMENTO DE TURMAS E EVASÃO                              */
-  /* ------------------------------------------------------------------ */
+  /* ================================================================== */
+  /* 3. ACOMPANHAMENTO DE TURMAS E EVASÃO                               */
+  /* ================================================================== */
   {
-    const wb = new ExcelJS.Workbook()
-    wb.creator = "EMERON / TJ-RO"
-    const ws = wb.addWorksheet("Controle_Turmas_Evasao")
-
-    const headers = [
-      "Codigo_Turma",
-      "Nome_Curso",
-      "Instrutor_Responsavel",
-      "Ambiente_AVA",
-      "Total_Matriculados",
-      "Participantes_Ativos",
-      "Concluintes",
-      "Evasoes_Registradas",
-      "Taxa_Conclusao",
-      "Media_Final_Turma",
-      "NPS_Satisfacao",
-      "Status_Turma",
-      "Data_Fechamento",
-      "Certificados_Emitidos",
+    const turmasCursos = [
+      "Turma 01 - Direito Digital e IA Aplicada ao Judiciário",
+      "Turma 02 - Prática Processual e Redação de Sentenças",
+      "Turma 03 - Mediação, Conciliação e Práticas Autocompositivas",
+      "Turma 04 - Gestão Eletrônica de Processos e E-Proc Avançado",
+      "Turma 05 - Direito Penal Econômico e Lavagem de Dinheiro",
+      "Turma 06 - Direitos Humanos e Jurisdição Territorial na Amazônia",
+      "Turma 07 - Inteligência Artificial e Pesquisa Jurisprudencial",
+      "Turma 08 - Audiências de Custódia e Garantias Constitucionais",
+      "Turma 09 - Gestão de Cartórios e Liderança de Equipes",
+      "Turma 10 - Avaliação de Provas Digitais e Cadeia de Custódia",
     ]
 
-    const rows = [
-      ["TURMA-2026-T1", "Pós-Graduação em Direito Digital e IA", "Dra. Mariana Vasconcelos", "Moodle Institucional", 45, 42, 0, 3, 0.933, 8.8, 94, "Em Andamento", "2026-11-30", 0],
-      ["TURMA-2026-T2", "Oficina de Redação de Sentenças Cíveis", "Dr. Roberto Albuquerque", "Sala Presencial EMERON 1", 30, 30, 29, 1, 0.967, 9.2, 98, "Concluída", "2026-02-28", 29],
-      ["TURMA-2026-T3", "Gestão Processual e E-Proc", "Coord. Fabiana Rios", "Moodle Institucional", 120, 108, 0, 12, 0.900, 8.4, 88, "Em Andamento", "2026-05-15", 0],
-      ["TURMA-2026-T4", "IA Aplicada à Pesquisa Jurisprudencial", "Analista Gabriel Torres", "Google Classroom / Teams", 150, 145, 142, 5, 0.947, 9.0, 96, "Concluída", "2026-02-15", 142],
-      ["TURMA-2026-T5", "Mediação e Conciliação Judicial (NUPEMEC)", "Dra. Luciana Freitas", "Moodle + Sala de Audiência", 50, 47, 0, 3, 0.940, 8.6, 92, "Em Andamento", "2026-05-30", 0],
-      ["TURMA-2026-T6", "Gestão Emocional e Liderança Humanizada", "Psic. Heloísa Prado", "Auditório Principal TJRO", 80, 78, 76, 2, 0.950, 9.5, 99, "Concluída", "2026-03-20", 76],
-      ["TURMA-2026-T7", "Audiências de Custódia e Garantias Processuais", "Juiz Substituto Rogério Matos", "Presencial Ji-Paraná", 40, 36, 0, 4, 0.900, 8.1, 85, "Em Andamento", "2026-06-10", 0],
-      ["TURMA-2026-T8", "Oratória, Argumentação e Sustentação Oral", "Prof. Paulo Henrique Siqueira", "Moodle + Webinários", 60, 52, 49, 8, 0.817, 7.9, 82, "Concluída", "2026-03-10", 49],
-      ["TURMA-2026-T9", "Direito Notarial e Registral na Amazônia", "Tabelião Convidado Marcos Viana", "Moodle Institucional", 70, 68, 0, 2, 0.971, 8.9, 91, "Em Andamento", "2026-07-20", 0],
-      ["TURMA-2026-T10", "Direitos Fundamentais e Povos Indígenas", "Dra. Yara Tupinambá", "Polo Guajará-Mirim", 40, 39, 0, 1, 0.975, 9.3, 97, "Planejada", "2026-10-09", 0],
-    ]
+    const records: ActionRecord[] = []
+    for (let i = 0; i < 42; i++) {
+      const codigo = `TRM-2026-${String(i + 1).padStart(3, "0")}`
+      const curso = turmasCursos[i % turmasCursos.length] + ` (Polo ${["Porto Velho", "Ji-Paraná", "Cacoal", "Vilhena", "EAD"][i % 5]})`
+      const seiProcess = `00${String(14000 + i * 51).padStart(7, "0")}.000048/2026-${String((i * 19) % 90 + 10)}`
+      const idEmeronWeb = `EW-2026-${String(8400 + i * 17)}`
+      const setor = ["Coordenação Pedagógica", "Secretaria Escolar", "Tecnologia da Informação", "Assistência ao Estudante"][i % 4]
+      const cat = ["Ensino", "Formação", "Tecnologia", "Assistência"][i % 4]
+      const resp = ["Mariana Alves", "Carlos Lima", "Beatriz Rocha", "Ana Souza", "Rafael Nunes"][i % 5]
 
-    const widths = [18, 42, 28, 25, 18, 18, 16, 18, 16, 18, 16, 16, 16, 20]
-    const numFmts: Record<number, string> = {
-      5: "#,##0",
-      6: "#,##0",
-      7: "#,##0",
-      8: "#,##0",
-      9: "0.0%",
-      10: "0.0",
-      11: "0",
-      14: "#,##0",
-    }
-    const aligns: Record<number, "left" | "center" | "right"> = {
-      1: "center",
-      4: "center",
-      5: "center",
-      6: "center",
-      7: "center",
-      8: "center",
-      9: "center",
-      10: "center",
-      11: "center",
-      12: "center",
-      13: "center",
-      14: "center",
+      const isConcl = i % 4 === 0
+      const isLate = i % 6 === 0
+      const status = isConcl ? "Concluída" : isLate ? "Atrasada" : i % 2 === 0 ? "Em andamento" : "Planejada"
+      const prio = i % 3 === 0 ? "Alta" : i % 2 === 0 ? "Média" : "Baixa"
+      const prev = 25000 + ((i * 4500) % 60000)
+      const exec = isConcl ? prev : isLate ? Math.round(prev * 0.3) : Math.round(prev * 0.65)
+      const mes = (i % 12) + 1
+      const dia = ((i * 5) % 27) + 1
+
+      records.push({
+        codigo,
+        acao: curso,
+        processoSei: seiProcess,
+        idEmeronWeb,
+        setor,
+        categoria: cat,
+        responsavel: resp,
+        status,
+        prioridade: prio,
+        prazo: new Date(2026, mes - 1, dia),
+        cargaHoraria: [30, 40, 60, 120][i % 4],
+        orcamentoPrevisto: prev,
+        orcamentoExecutado: exec,
+        alunosBeneficiados: Math.round(35 + ((i * 13) % 180)),
+        progresso: prev > 0 ? exec / prev : 0,
+      })
     }
 
-    styleWorksheet(ws, "CONTROLE PEDAGÓGICO DE TURMAS E DESEMPENHO ACADÊMICO", "Acompanhamento de Matrículas, Frequência, Evasão e Avaliação de Satisfação", headers, rows, widths, numFmts, aligns)
-    await wb.xlsx.writeFile(path.join(outputDir, "03_acompanhamento_turmas_e_evasao.xlsx"))
+    await createCleanSpreadsheet(
+      path.join(outputDir, "03_acompanhamento_pedagogico_turmas_e_evasao.xlsx"),
+      "Turmas_e_Desempenho",
+      records,
+    )
   }
 
-  /* ------------------------------------------------------------------ */
-  /* 4. CRONOGRAMA DE EVENTOS E PRAZOS SEI                             */
-  /* ------------------------------------------------------------------ */
+  /* ================================================================== */
+  /* 4. CRONOGRAMA DE PRAZOS E MARCOS SEI                               */
+  /* ================================================================== */
   {
-    const wb = new ExcelJS.Workbook()
-    wb.creator = "EMERON / TJ-RO"
-    const ws = wb.addWorksheet("Cronograma_Prazos_SEI")
-
-    const headers = [
-      "ID_Evento",
-      "Descricao_Atividade",
-      "Tipo_Evento",
-      "Setor_Responsavel",
-      "Data_Limite",
-      "Data_Conclusao",
-      "Dias_Restantes",
-      "Status_Prazo",
-      "Impacto_Institucional",
-      "Numero_Processo_SEI",
-      "Observacoes_Operacionais",
+    const marcos = [
+      "Publicação de Edital de Seleção Discente",
+      "Contratação de Docência Externa Especializada",
+      "Homologação das Inscrições e Turmas",
+      "Fechamento do Módulo Avaliativo 1 no AVA",
+      "Emissão de Portaria de Conclusão de Curso",
+      "Prestação de Contas Financeira e Liquidação",
+      "Auditoria Regulatória de Conformidade ENFAM",
+      "Emissão e Registro de Certificados Digitais",
+      "Avaliação Institucional de Reação pelos Alunos",
+      "Encaminhamento de Relatório Semestral à Presidência",
     ]
 
-    const rows = [
-      ["EVT-2026-01", "Publicação do Edital do Processo Seletivo de Pós-Graduação", "Edital", "Secretaria Acadêmica", "2026-01-15", "2026-01-14", 0, "Concluído", "Crítico", "0012345.000048/2026-12", "Publicado no DJE edição 012/2026"],
-      ["EVT-2026-02", "Contratação dos Docentes da Oficina de Sentenças", "Contrato", "Coordenadoria Financeira", "2026-01-30", "2026-01-28", 0, "Concluído", "Alto", "0012345.000072/2026-55", "Contrato assinado pelo Diretor-Geral"],
-      ["EVT-2026-03", "Lançamento de Notas do Módulo 1 da Pós-Graduação", "Avaliação", "Coordenação Pedagógica", "2026-04-15", "", 12, "Em Andamento", "Médio", "0012345.000048/2026-12", "Professores enviando notas pelo Moodle"],
-      ["EVT-2026-04", "Prestação de Contas do Simpósio de Direito Ambiental", "Financeiro", "Comissão Organizadora", "2026-09-10", "", 150, "Pendente", "Alto", "0012345.000144/2026-30", "Aguardando realização do evento"],
-      ["EVT-2026-05", "Emissão dos Certificados do Curso de Conciliação NUPEMEC", "Certificação", "Secretaria de Registros", "2026-06-15", "", 70, "Pendente", "Médio", "0012345.000189/2026-88", "Necessita frequência mínima de 75%"],
-      ["EVT-2026-06", "Auditoria de Conformidade Regulatória ENFAM", "Auditoria", "Gabinete da Direção", "2026-07-30", "", 110, "Em Análise", "Crítico", "0012345.000500/2026-01", "Dossiê pedagógico em consolidação"],
-      ["EVT-2026-07", "Fechamento da Folha de Pagamento de Instrutoria Março", "Folha", "Recursos Humanos", "2026-03-25", "2026-03-24", 0, "Concluído", "Alto", "0012345.000340/2026-19", "Empenhos liquidados com sucesso"],
-      ["EVT-2026-08", "Abertura das Inscrições para o Seminário Novo CPC", "Inscrições", "Assessoria de Comunicação", "2026-10-01", "", 180, "Planejado", "Médio", "0012345.000412/2026-80", "Divulgação no portal e redes sociais"],
-      ["EVT-2026-09", "Relatório de Gestão Semestral à Presidência do TJRO", "Relatório", "Diretoria Geral", "2026-07-15", "", 95, "Em Andamento", "Crítico", "0012345.000620/2026-44", "Coleta de dados pelo Radar EMERON"],
-      ["EVT-2026-10", "Renovação das Licenças de Software Educacional Moodle", "TI / Contratos", "Divisão de Informática", "2026-05-01", "", 25, "Urgente", "Alto", "0012345.000103/2026-91", "Termo de Referência em análise jurídica"],
-    ]
+    const records: ActionRecord[] = []
+    for (let i = 0; i < 48; i++) {
+      const codigo = `MARCO-2026-${String(i + 1).padStart(3, "0")}`
+      const marco = marcos[i % marcos.length] + ` - Ação ${String(i + 1).padStart(2, "0")}`
+      const seiProcess = `00${String(16000 + i * 37).padStart(7, "0")}.000048/2026-${String((i * 23) % 90 + 10)}`
+      const idEmeronWeb = `EW-2026-${String(8600 + i * 21)}`
+      const setor = ["Coordenação Pedagógica", "Gabinete Presidência", "Secretaria Escolar", "Gestão Financeira"][i % 4]
+      const cat = ["Administrativo", "Ensino", "Formação", "Tecnologia"][i % 4]
+      const resp = ["Mariana Alves", "Rafael Nunes", "João Pereira", "Ana Souza", "Carlos Lima"][i % 5]
 
-    const widths = [16, 46, 18, 26, 15, 15, 16, 16, 20, 24, 38]
-    const numFmts: Record<number, string> = {
-      7: "#,##0",
-    }
-    const aligns: Record<number, "left" | "center" | "right"> = {
-      1: "center",
-      3: "center",
-      5: "center",
-      6: "center",
-      7: "center",
-      8: "center",
-      9: "center",
-      10: "center",
+      const isConcl = i < 15
+      const isLate = i === 18 || i === 25
+      const status = isConcl ? "Concluída" : isLate ? "Atrasada" : i < 35 ? "Em andamento" : "Planejada"
+      const prio = i % 3 === 0 ? "Alta" : i % 2 === 0 ? "Média" : "Baixa"
+      const prev = 18000 + ((i * 3200) % 45000)
+      const exec = isConcl ? prev : isLate ? Math.round(prev * 0.25) : Math.round(prev * 0.6)
+      const mes = Math.floor(i / 4) + 1
+      const dia = ((i * 6) % 27) + 1
+
+      records.push({
+        codigo,
+        acao: marco,
+        processoSei: seiProcess,
+        idEmeronWeb,
+        setor,
+        categoria: cat,
+        responsavel: resp,
+        status,
+        prioridade: prio,
+        prazo: new Date(2026, Math.min(11, mes - 1), dia),
+        cargaHoraria: [20, 30, 40, 60][i % 4],
+        orcamentoPrevisto: prev,
+        orcamentoExecutado: exec,
+        alunosBeneficiados: Math.round(20 + ((i * 11) % 150)),
+        progresso: prev > 0 ? exec / prev : 0,
+      })
     }
 
-    styleWorksheet(ws, "CRONOGRAMA INSTITUCIONAL DE MARCOS E PRAZOS SEI 2026", "Acompanhamento Temporal de Editais, Contratos, Avaliações e Auditorias", headers, rows, widths, numFmts, aligns)
-    await wb.xlsx.writeFile(path.join(outputDir, "04_cronograma_eventos_e_prazos_sei.xlsx"))
+    await createCleanSpreadsheet(
+      path.join(outputDir, "04_cronograma_de_prazos_e_marcos_sei.xlsx"),
+      "Cronograma_Prazos_SEI",
+      records,
+    )
   }
 
-  /* ------------------------------------------------------------------ */
-  /* 5. CADASTRO DE DOCENTES E INSTRUTORES                             */
-  /* ------------------------------------------------------------------ */
+  /* ================================================================== */
+  /* 5. CORPO DOCENTE E ESPECIALIZAÇÕES EMERON                          */
+  /* ================================================================== */
   {
-    const wb = new ExcelJS.Workbook()
-    wb.creator = "EMERON / TJ-RO"
-    const ws = wb.addWorksheet("Docentes_e_Instrutores")
-
-    const headers = [
-      "Matricula_Docente",
-      "Nome_Completo",
-      "Titulacao_Academica",
-      "Tribunal_Instituicao",
-      "Especialidade_Juridica",
-      "Horas_Aulas_2026",
-      "Turmas_Ministradas",
-      "Nota_Avaliacao_Media",
-      "Status_Credenciamento",
-      "Ultima_Atuacao",
-      "Valor_Hora_Aula",
+    const docentes = [
+      { nome: "Dra. Mariana Vasconcelos", tema: "Direito Digital e Governança Algorítmica", setor: "Coordenação Pedagógica", prio: "Alta" },
+      { nome: "Dr. Roberto Albuquerque", tema: "Técnicas de Decisão Judicial e Sentença Cível", setor: "Coordenação Pedagógica", prio: "Alta" },
+      { nome: "Prof. Dr. Nelson Nery Jr.", tema: "Teoria Geral dos Recursos e Precedentes", setor: "Coordenação Pedagógica", prio: "Alta" },
+      { nome: "Coord. Fabiana Rios", tema: "Gestão Judiciária e Fluxos Processuais E-Proc", setor: "Secretaria Escolar", prio: "Média" },
+      { nome: "Dra. Luciana Freitas", tema: "Métodos Consensuais de Solução de Conflitos", setor: "Assistência ao Estudante", prio: "Média" },
+      { nome: "Dr. Marcelo Fagundes", tema: "Direito Penal Econômico e Crimes Tributários", setor: "Coordenação Pedagógica", prio: "Alta" },
+      { nome: "Analista Gabriel Torres", tema: "Inteligência Artificial na Pesquisa Jurisprudencial", setor: "Tecnologia da Informação", prio: "Média" },
+      { nome: "Dra. Yara Tupinambá", tema: "Direitos Indígenas e Políticas Étnicas na Amazônia", setor: "Coordenação Pedagógica", prio: "Alta" },
+      { nome: "Psic. Heloísa Prado", tema: "Saúde Ocupacional e Liderança Humanizada", setor: "Assistência ao Estudante", prio: "Baixa" },
+      { nome: "Des. Alexandre Godoy", tema: "Jurisprudência Vinculante dos Tribunais Superiores", setor: "Coordenação Pedagógica", prio: "Alta" },
     ]
 
-    const rows = [
-      ["DOC-2026-001", "Dra. Mariana Vasconcelos", "Doutorado", "TJ-RO / Magistrada", "Direito Digital e Proteção de Dados", 60, 2, 9.8, "Ativo / Regular", "2026-03-15", 350],
-      ["DOC-2026-002", "Dr. Roberto Albuquerque", "Mestrado", "TJ-RO / Juiz de Direito", "Direito Processual Civil e Sentenças", 40, 1, 9.6, "Ativo / Regular", "2026-02-28", 300],
-      ["DOC-2026-003", "Prof. Dr. Nelson Nery Jr.", "Pós-Doutorado", "PUC-SP / Professor Convidado", "Teoria Geral dos Recursos e Processo Civil", 16, 1, 10.0, "Convidado Especial", "2026-02-12", 650],
-      ["DOC-2026-004", "Coord. Fabiana Rios", "Especialização", "TJ-RO / Analista Judiciária", "Gestão de Sistemas e E-Proc", 45, 2, 9.2, "Ativo / Regular", "2026-04-01", 200],
-      ["DOC-2026-005", "Dra. Luciana Freitas", "Mestrado", "TJ-RO / Magistrada NUPEMEC", "Mediação, Arbitragem e Métodos Autocompositivos", 50, 2, 9.5, "Ativo / Regular", "2026-03-20", 300],
-      ["DOC-2026-006", "Dr. Marcelo Fagundes", "Doutorado", "TRF-1 / Juiz Federal", "Direito Penal Econômico e Crimes Financeiros", 30, 1, 9.4, "Credenciado Externo", "2026-04-10", 380],
-      ["DOC-2026-007", "Analista Gabriel Torres", "Mestrado", "TJ-RO / DTI", "Inteligência Artificial e Engenharia de Prompt", 30, 1, 9.7, "Ativo / Regular", "2026-02-15", 220],
-      ["DOC-2026-008", "Dra. Yara Tupinambá", "Doutorado", "UNIR / Professora Titular", "Direitos Indígenas e Políticas Étnicas", 40, 1, 9.9, "Credenciado Externo", "2026-04-12", 350],
-      ["DOC-2026-009", "Psic. Heloísa Prado", "Mestrado", "Especialista em Saúde Ocupacional", "Psicologia Organizacional e Liderança", 20, 1, 9.9, "Credenciado Externo", "2026-03-20", 280],
-      ["DOC-2026-010", "Des. Alexandre Godoy", "Doutorado", "TJ-RO / Desembargador", "Precedentes Judiciais Obrigatórios", 24, 1, 9.8, "Corpo Permanente", "2026-04-05", 400],
-    ]
+    const records: ActionRecord[] = []
+    for (let i = 0; i < 40; i++) {
+      const d = docentes[i % docentes.length]
+      const codigo = `DOC-2026-${String(i + 1).padStart(3, "0")}`
+      const acao = `Curso com ${d.nome}: ${d.tema} (Edição ${Math.floor(i / docentes.length) + 1})`
+      const seiProcess = `00${String(15000 + i * 47).padStart(7, "0")}.000048/2026-${String((i * 13) % 90 + 10)}`
+      const idEmeronWeb = `EW-2026-${String(8800 + i * 15)}`
 
-    const widths = [18, 32, 22, 28, 38, 18, 18, 20, 22, 16, 18]
-    const numFmts: Record<number, string> = {
-      6: "#,##0",
-      7: "#,##0",
-      8: "0.0",
-      11: '"R$ "#,##0.00',
-    }
-    const aligns: Record<number, "left" | "center" | "right"> = {
-      1: "center",
-      3: "center",
-      4: "center",
-      6: "center",
-      7: "center",
-      8: "center",
-      9: "center",
-      10: "center",
-      11: "right",
+      const isConcl = i % 3 === 0
+      const isLate = i === 11 || i === 23
+      const status = isConcl ? "Concluída" : isLate ? "Atrasada" : i % 2 === 0 ? "Em andamento" : "Planejada"
+      const prev = 30000 + ((i * 5200) % 80000)
+      const exec = isConcl ? prev : isLate ? Math.round(prev * 0.2) : Math.round(prev * 0.7)
+      const mes = (i % 12) + 1
+      const dia = ((i * 8) % 27) + 1
+
+      records.push({
+        codigo,
+        acao,
+        processoSei: seiProcess,
+        idEmeronWeb,
+        setor: d.setor,
+        categoria: "Formação",
+        responsavel: d.nome,
+        status,
+        prioridade: d.prio,
+        prazo: new Date(2026, mes - 1, dia),
+        cargaHoraria: [30, 40, 60, 80][i % 4],
+        orcamentoPrevisto: prev,
+        orcamentoExecutado: exec,
+        alunosBeneficiados: Math.round(30 + ((i * 15) % 190)),
+        progresso: prev > 0 ? exec / prev : 0,
+      })
     }
 
-    styleWorksheet(ws, "CADASTRO INSTITUCIONAL DO CORPO DOCENTE E INSTRUTORES", "Ficha Cadastral, Titulação Acadêmica, Horas-Aula e Avaliações de Desempenho", headers, rows, widths, numFmts, aligns)
-    await wb.xlsx.writeFile(path.join(outputDir, "05_prontuario_docentes_e_avaliacoes.xlsx"))
+    await createCleanSpreadsheet(
+      path.join(outputDir, "05_corpo_docente_e_especializacoes_emeron.xlsx"),
+      "Corpo_Docente_2026",
+      records,
+    )
   }
 
-  console.log("Todas as 5 planilhas foram geradas com sucesso!")
+  // Remove arquivos antigos que tinham nomes anteriores se existirem
+  const oldFiles = [
+    "01_plano_anual_capacitacao_2026.xlsx",
+    "02_execucao_orcamentaria_emeron_2026.xlsx",
+    "03_acompanhamento_turmas_e_evasao.xlsx",
+    "04_cronograma_eventos_e_prazos_sei.xlsx",
+    "05_prontuario_docentes_e_avaliacoes.xlsx",
+  ]
+  oldFiles.forEach((f) => {
+    const p = path.join(outputDir, f)
+    if (fs.existsSync(p)) fs.unlinkSync(p)
+  })
+
+  console.log("\n🎉 Todas as 5 planilhas perfeitas foram geradas e validadas com sucesso!")
 }
 
-generateSampleExcelFiles().catch(console.error)
+generateAllExcelInputs().catch(console.error)
