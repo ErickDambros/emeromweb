@@ -83,76 +83,45 @@
   --sidebar-ring: #2e76aa;
 }
 
+/* ==========================================================================
+   Modo Escuro — Identidade Institucional TJ-RO / EMERON
+   Paleta azul-marinho / obsidiana com alto contraste (WCAG AAA).
+   A escolha do usuário é soberana: NÃO há sobrescrita por preferência do
+   sistema (prefers-color-scheme). O tema é controlado pela classe .dark.
+   ========================================================================== */
 .dark {
   color-scheme: dark;
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not(.light) {
-    color-scheme: dark;
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
-  }
+  --background: #090e17;
+  --foreground: #eef3fa;
+  --card: #101827;
+  --card-foreground: #eef3fa;
+  --popover: #101827;
+  --popover-foreground: #eef3fa;
+  --primary: #5aa9e0;
+  --primary-foreground: #061422;
+  --secondary: #172131;
+  --secondary-foreground: #eef3fa;
+  --muted: #172131;
+  --muted-foreground: #aabfd6;
+  --accent: #f5822e;
+  --accent-foreground: #0a0f17;
+  --destructive: #f87171;
+  --border: #1e2c40;
+  --input: #24334a;
+  --ring: #5aa9e0;
+  --chart-1: #5aa9e0;
+  --chart-2: #8cc1ec;
+  --chart-3: #f5933f;
+  --chart-4: #f87171;
+  --chart-5: #6fa8d6;
+  --sidebar: #101827;
+  --sidebar-foreground: #cbd9ea;
+  --sidebar-primary: #5aa9e0;
+  --sidebar-primary-foreground: #061422;
+  --sidebar-accent: #172131;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #1e2c40;
+  --sidebar-ring: #5aa9e0;
 }
 
 @layer base {
@@ -162,6 +131,20 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Rolagem horizontal suave para tabelas e gráficos em telas pequenas */
+.scroll-touch {
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+}
+.scroll-touch::-webkit-scrollbar {
+  height: 8px;
+}
+.scroll-touch::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
 }
 
 /* Impressão / exportação de relatório em PDF */

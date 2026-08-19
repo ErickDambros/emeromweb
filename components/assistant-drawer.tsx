@@ -199,13 +199,90 @@ export function AssistantDrawer() {
   )
 }
 
-/** Renderiza markdown simples (negrito, marcadores) sem dependência externa */
+/** Renderiza markdown rico (negrito, itálico, código, listas e checklists) */
 function renderFormattedText(text: string) {
-  const parts = text.split(/(\*\*.*?\*\*)/g)
-  return parts.map((part, i) => {
-    if (part.startsWith("**") && part.endsWith("**")) {
-      return <strong key={i} className="font-semibold text-foreground">{part.slice(2, -2)}</strong>
+  const lines = text.split("\n")
+  return lines.map((line, lineIdx) => {
+    // Linha vazia vira espaçamento entre parágrafos
+    if (!line.trim()) {
+      return <div key={lineIdx} className="h-2" />
     }
-    return part
+
+    // Linha de checklist: - [ ] ou - [x]
+    if (/^(\s*-\s*\[([ xX])\]\s*)(.*)/.test(line)) {
+      const match = line.match(/^(\s*-\s*\[([ xX])\]\s*)(.*)/)
+      if (match) {
+        const isChecked = match[2].toLowerCase() === "x"
+        return (
+          <div key={lineIdx} className="my-0.5 flex items-start gap-1.5 pl-1 text-xs">
+            <span className={`font-mono text-xs ${isChecked ? "text-emerald-500 font-bold" : "text-amber-500 font-bold"}`}>
+              {isChecked ? "☑" : "☐"}
+            </span>
+            <span className="flex-1">{formatInline(match[3])}</span>
+          </div>
+        )
+      }
+    }
+
+    // Linha de item de lista: • ou - ou *
+    if (/^(\s*[•\-\*]\s+)(.*)/.test(line)) {
+      const match = line.match(/^(\s*[•\-\*]\s+)(.*)/)
+      if (match) {
+        return (
+          <div key={lineIdx} className="my-0.5 flex items-start gap-1.5 pl-1">
+            <span className="text-primary font-bold">•</span>
+            <span className="flex-1">{formatInline(match[2])}</span>
+          </div>
+        )
+      }
+    }
+
+    // Linha numerada: 1. ou 2.
+    if (/^(\s*\d+\.\s+)(.*)/.test(line)) {
+      const match = line.match(/^(\s*\d+\.\s+)(.*)/)
+      if (match) {
+        return (
+          <div key={lineIdx} className="my-0.5 flex items-start gap-1.5 pl-1">
+            <span className="font-semibold text-primary">{match[1]}</span>
+            <span className="flex-1">{formatInline(match[2])}</span>
+          </div>
+        )
+      }
+    }
+
+    return (
+      <p key={lineIdx} className="my-0.5 leading-relaxed">
+        {formatInline(line)}
+      </p>
+    )
+  })
+}
+
+function formatInline(text: string) {
+  // Split por code `...`, bold **...**, e italic *...*
+  const tokens = text.split(/(`[^`]+`|\*\*[^*]+\*\*|\*[^*]+\*)/g)
+  return tokens.map((token, i) => {
+    if (token.startsWith("`") && token.endsWith("`")) {
+      return (
+        <code key={i} className="rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-primary border border-border">
+          {token.slice(1, -1)}
+        </code>
+      )
+    }
+    if (token.startsWith("**") && token.endsWith("**")) {
+      return (
+        <strong key={i} className="font-bold text-foreground">
+          {token.slice(2, -2)}
+        </strong>
+      )
+    }
+    if (token.startsWith("*") && token.endsWith("*")) {
+      return (
+        <em key={i} className="italic text-foreground/90">
+          {token.slice(1, -1)}
+        </em>
+      )
+    }
+    return token
   })
 }

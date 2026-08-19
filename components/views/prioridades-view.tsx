@@ -15,6 +15,17 @@ import {
 } from "@/components/ui/select"
 import { useDataStore } from "@/components/data-store"
 import { EmptyState } from "@/components/empty-state"
+import { ExportMenu } from "@/components/export-menu"
+import {
+  authenticityHash,
+  exportPrioritiesCsv,
+  exportPrioritiesJson,
+  exportPrioritiesMarkdown,
+  exportPrioritiesPdf,
+  exportPrioritiesTxt,
+  exportPrioritiesXlsx,
+  prioritiesToText,
+} from "@/lib/export-utils"
 import { categoryColumns, formatCell, formatCompact, groupBy, numericColumns } from "@/lib/data-engine"
 import type { CellValue } from "@/lib/types"
 
@@ -25,7 +36,7 @@ interface PrioridadesViewProps {
 }
 
 export function PrioridadesView({ onSelectAction }: PrioridadesViewProps) {
-  const { activeDataset } = useDataStore()
+  const { filteredDataset: activeDataset } = useDataStore()
   const cats = activeDataset ? categoryColumns(activeDataset) : []
   const nums = activeDataset ? numericColumns(activeDataset) : []
 
@@ -90,7 +101,7 @@ export function PrioridadesView({ onSelectAction }: PrioridadesViewProps) {
               Ordenado por {isCount ? "número de registros" : `soma de ${mea}`}
             </CardDescription>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Select value={dim} onValueChange={(val) => val && setDimension(val)}>
               <SelectTrigger className="w-[160px] bg-background">
                 <SelectValue />
@@ -116,6 +127,28 @@ export function PrioridadesView({ onSelectAction }: PrioridadesViewProps) {
                 ))}
               </SelectContent>
             </Select>
+            <ExportMenu
+              label="Exportar Prioridades"
+              variant="outline"
+              documentTitle={`Matriz de Prioridades — ${dim}`}
+              documentSubtitle={`Ordenado por ${isCount ? "contagem" : mea} · ${activeDataset.sheetName} (${ranking.length} categorias)`}
+              documentHash={authenticityHash(`prioridades|${activeDataset.sheetName}|${dim}|${mea}`)}
+              itemCount={ranking.length}
+              category="Prioridades & Atenção"
+              onPdf={() => exportPrioritiesPdf(ranking, activeDataset, dim, mea)}
+              onExcel={() => exportPrioritiesXlsx(ranking, activeDataset, dim, mea)}
+              onCsv={() => exportPrioritiesCsv(ranking, activeDataset, dim, mea)}
+              onJson={() => exportPrioritiesJson(ranking, activeDataset, dim, mea)}
+              onTxt={() => exportPrioritiesTxt(ranking, activeDataset, dim, mea)}
+              onMarkdown={() => exportPrioritiesMarkdown(ranking, activeDataset, dim, mea)}
+              buildText={() => prioritiesToText(ranking, activeDataset, dim, mea)}
+              buildJsonData={() => ({
+                dimensao: dim,
+                medida: mea,
+                tabela: activeDataset.sheetName,
+                ranking,
+              })}
+            />
           </div>
         </CardHeader>
         <CardContent className="space-y-2.5">

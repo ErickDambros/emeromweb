@@ -226,13 +226,15 @@ export function queryAssistant(rawQuestion: string, ctx: AssistantContext): { te
     }
   }
 
-  // A3. Como gerar dossiê e relatórios PDF
-  if (q.includes("gerar dossie") || q.includes("exportar pdf") || q.includes("relatorio pdf") || q.includes("como imprimir")) {
+  // A3. Como gerar dossiê, relatórios e formatos de exportação
+  if (q.includes("gerar dossie") || q.includes("exportar") || q.includes("formatos") || q.includes("relatorio pdf") || q.includes("como imprimir")) {
     return {
       category: "nav",
-      text: `Existem duas formas de exportar relatórios no sistema:\n\n` +
-        `1. **Dossiê Individual (Prontuário Vivo):** Acesse a aba *Prioridades*, clique na ação desejada e clique no botão **"Exportar Dossiê em PDF"**.\n` +
-        `2. **Relatório Institucional Geral:** Acesse a aba *Relatórios*, selecione as métricas desejadas e clique em **"Exportar PDF"** no topo da página.`,
+      text: `O **RADAR EMERON** suporta exportação completa em múltiplos formatos 100% no cliente:\n\n` +
+        `• 📄 **Documentos:** PDF Oficial A4 (Impressão/Salvar), Documento Word (\`.doc\`) e Página Web Autônoma (\`.html\`).\n` +
+        `• 📊 **Planilhas & Dados:** Excel (\`.xlsx\`), CSV com BOM UTF-8 (\`.csv\`), JSON (\`.json\`) e Calendário iCal (\`.ics\`).\n` +
+        `• 📋 **Texto & SEI:** Arquivo Texto (\`.txt\`), Nota em Markdown (\`.md\`) e Copiar Resumo Textual.\n\n` +
+        `Você encontra o menu **"Exportar"** no topo de todas as abas: **Relatórios**, **Prioridades**, **Prontuário Vivo**, **Indicadores** e **Agendas**.`,
     }
   }
 

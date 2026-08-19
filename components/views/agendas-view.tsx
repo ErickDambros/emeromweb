@@ -14,6 +14,18 @@ import {
 import { useDataStore } from "@/components/data-store"
 import { EmptyState } from "@/components/empty-state"
 import { KpiCard } from "@/components/kpi-card"
+import { ExportMenu } from "@/components/export-menu"
+import {
+  agendaToText,
+  authenticityHash,
+  exportAgendaCsv,
+  exportAgendaIcs,
+  exportAgendaJson,
+  exportAgendaMarkdown,
+  exportAgendaPdf,
+  exportAgendaTxt,
+  exportAgendaXlsx,
+} from "@/lib/export-utils"
 import { categoryColumns, dateColumns } from "@/lib/data-engine"
 import type { CellValue } from "@/lib/types"
 
@@ -36,7 +48,7 @@ function toDate(v: CellValue): Date | null {
 }
 
 export function AgendasView() {
-  const { activeDataset } = useDataStore()
+  const { filteredDataset: activeDataset } = useDataStore()
   const dates = activeDataset ? dateColumns(activeDataset) : []
   const cats = activeDataset ? categoryColumns(activeDataset) : []
 
@@ -120,22 +132,50 @@ export function AgendasView() {
         <KpiCard label="Neste mês" value={String(thisMonth)} hint={monthFmt.format(now)} icon={CalendarDays} accent="chart-2" />
       </div>
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">Cronograma agrupado por mês</p>
-        {dates.length > 1 && (
-          <Select value={active} onValueChange={(val) => val && setDateCol(val)}>
-            <SelectTrigger className="w-[180px] bg-background">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {dates.map((d) => (
-                <SelectItem key={d.name} value={d.name}>
-                  {d.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {dates.length > 1 && (
+            <Select value={active} onValueChange={(val) => val && setDateCol(val)}>
+              <SelectTrigger className="w-[180px] bg-background">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {dates.map((d) => (
+                  <SelectItem key={d.name} value={d.name}>
+                    {d.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <ExportMenu
+            label="Exportar Agenda"
+            variant="outline"
+            documentTitle={`Cronograma de Agendas & Prazos — ${active}`}
+            documentSubtitle={`${events.length} eventos e prazos mapeados · Ano ${new Date().getFullYear()}`}
+            documentHash={authenticityHash(`agenda|${events.length}|${active}`)}
+            itemCount={events.length}
+            category="Agendas & Cronogramas"
+            onIcs={() => exportAgendaIcs(events)}
+            onExcel={() => exportAgendaXlsx(events, active)}
+            onCsv={() => exportAgendaCsv(events)}
+            onJson={() => exportAgendaJson(events)}
+            onPdf={() => exportAgendaPdf(events, active)}
+            onTxt={() => exportAgendaTxt(events, active)}
+            onMarkdown={() => exportAgendaMarkdown(events, active)}
+            buildText={() => agendaToText(events, active)}
+            buildJsonData={() => ({
+              colunaData: active,
+              totalEventos: events.length,
+              eventos: events.map((e) => ({
+                data: e.date.toISOString(),
+                titulo: e.title,
+                tags: e.tags,
+              })),
+            })}
+          />
+        </div>
       </div>
 
       <div className="space-y-5">

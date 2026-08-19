@@ -21,6 +21,7 @@ export function AppShell() {
   const [view, setView] = useState<ViewKey>("indicadores")
   const [activeDossier, setActiveDossier] = useState<ActionDossier | null>(null)
   const [isTutorialOpen, setIsTutorialOpen] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const { lastNotes, activeDataset } = useDataStore()
   const [dismissed, setDismissed] = useState(false)
@@ -47,12 +48,18 @@ export function AppShell() {
 
   return (
     <div className="relative flex h-screen overflow-hidden bg-background text-foreground">
-      <Sidebar active={view} onChange={setView} />
+      <Sidebar
+        active={view}
+        onChange={setView}
+        mobileOpen={isMobileMenuOpen}
+        onMobileClose={() => setIsMobileMenuOpen(false)}
+      />
 
       <div className="flex min-w-0 flex-1 flex-col">
         <Topbar
           view={view}
           onStartTutorial={() => setIsTutorialOpen(true)}
+          onOpenMenu={() => setIsMobileMenuOpen(true)}
         />
 
         {showNotes && (

@@ -1,8 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { FileDown, FileText, Printer } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { FileText, Printer } from "lucide-react"
 import {
   Select,
   SelectContent,
@@ -12,6 +11,21 @@ import {
 } from "@/components/ui/select"
 import { useDataStore } from "@/components/data-store"
 import { EmptyState } from "@/components/empty-state"
+import { ExportMenu } from "@/components/export-menu"
+import {
+  authenticityHash,
+  buildReportHtml,
+  exportReportCsv,
+  exportReportDoc,
+  exportReportHtml,
+  exportReportJson,
+  exportReportMarkdown,
+  exportReportPdf,
+  exportReportTxt,
+  exportReportXlsx,
+  reportToText,
+  type ReportData,
+} from "@/lib/export-utils"
 import {
   aggregateOne,
   categoryColumns,
@@ -26,7 +40,7 @@ import {
 const COUNT = "__count__"
 
 export function RelatoriosView() {
-  const { activeDataset, sources } = useDataStore()
+  const { filteredDataset: activeDataset, sources } = useDataStore()
   const cats = activeDataset ? categoryColumns(activeDataset) : []
   const nums = activeDataset ? numericColumns(activeDataset) : []
   const dates = activeDataset ? dateColumns(activeDataset) : []
@@ -72,6 +86,29 @@ export function RelatoriosView() {
     ? activeDataset.rowCount
     : aggregateOne(measureValues(activeDataset, mea), "sum")
 
+  const reportData: ReportData = useMemo(() => {
+    return {
+      fileName: activeDataset.fileName,
+      sheetName: activeDataset.sheetName,
+      rowCount: activeDataset.rowCount,
+      dimension: dim,
+      measureLabel: isCount ? "Contagem de registros" : mea,
+      totalDisplay: formatNumber(total),
+      summary: (summary || []).map((s) => ({
+        name: s.name,
+        sum: formatNumber(s.sum),
+        avg: formatNumber(s.avg),
+        max: formatNumber(s.max),
+      })),
+      ranking: topIndicators.map((item) => ({
+        label: item.label,
+        value: item.value,
+        display: formatCompact(item.value),
+      })),
+      pdfAttachments: pdfSources.map((s) => s.fileName),
+    }
+  }, [activeDataset, dim, isCount, mea, total, summary, topIndicators, pdfSources])
+
   return (
     <div className="space-y-4">
       {/* Toolbar */}
@@ -104,10 +141,25 @@ export function RelatoriosView() {
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={() => window.print()} className="gap-2">
-          <FileDown className="size-4" />
-          Exportar PDF
-        </Button>
+        <ExportMenu
+          label="Exportar Relatório"
+          documentTitle={`Relatório Institucional — ${activeDataset.sheetName}`}
+          documentSubtitle={`Fonte: ${activeDataset.fileName} · ${activeDataset.rowCount} registros analisados`}
+          documentHash={authenticityHash(`${reportData.fileName}|${reportData.sheetName}|${reportData.rowCount}`)}
+          itemCount={activeDataset.rowCount}
+          category="Relatório Institucional"
+          onPdf={() => exportReportPdf(reportData)}
+          onDoc={() => exportReportDoc(reportData)}
+          onHtml={() => exportReportHtml(reportData)}
+          onExcel={() => exportReportXlsx(reportData)}
+          onCsv={() => exportReportCsv(reportData)}
+          onJson={() => exportReportJson(reportData)}
+          onTxt={() => exportReportTxt(reportData)}
+          onMarkdown={() => exportReportMarkdown(reportData)}
+          buildText={() => reportToText(reportData)}
+          buildHtmlPreview={() => buildReportHtml(reportData)}
+          buildJsonData={() => reportData}
+        />
       </div>
 
       {/* Documento */}
@@ -116,10 +168,10 @@ export function RelatoriosView() {
         <div className="flex items-start justify-between gap-4 border-b border-border pb-6">
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-primary">
-              Governo do Estado de Rondônia
+              Tribunal de Justiça de Rondônia
             </p>
-            <h2 className="mt-1 text-xl font-bold text-foreground">EMEROM — Escola de Governo</h2>
-            <p className="text-sm text-muted-foreground">Relatório Institucional de Indicadores</p>
+            <h2 className="mt-1 text-xl font-bold text-foreground">EMERON — Escola da Magistratura</h2>
+            <p className="text-sm text-muted-foreground">RADAR EMERON · Relatório Institucional de Indicadores</p>
           </div>
           <div className="text-right text-xs text-muted-foreground">
             <p>Emitido em</p>
@@ -213,7 +265,7 @@ export function RelatoriosView() {
 
         <div className="mt-8 flex items-center gap-2 border-t border-border pt-4 text-xs text-muted-foreground">
           <Printer className="size-3.5" />
-          <span>Documento gerado automaticamente pelo Painel EMEROMWEB Qlik Institucional.</span>
+          <span>Documento oficial gerado pelo RADAR EMERON · Tribunal de Justiça de Rondônia (TJ-RO).</span>
         </div>
       </div>
     </div>

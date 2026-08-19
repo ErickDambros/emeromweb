@@ -1,15 +1,12 @@
 # Multi-stage Dockerfile para Next.js Standalone
 FROM node:20-alpine AS base
 WORKDIR /app
-RUN npm install -g pnpm
 
 # Dependências
 FROM base AS deps
 WORKDIR /app
-COPY package.json pnpm-lock.yaml* package-lock.json* pnpm-workspace.yaml* ./
-RUN if [ -f pnpm-lock.yaml ]; then pnpm install --no-frozen-lockfile; \
-    elif [ -f package-lock.json ]; then npm ci; \
-    else npm install; fi
+COPY package.json package-lock.json* ./
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
 
 # Build
 FROM base AS builder
@@ -36,7 +33,6 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
 USER nextjs
-
 EXPOSE 3000
 
 CMD ["node", "server.js"]

@@ -2,19 +2,14 @@
 
 import {
   AlertCircle,
-  AlertTriangle,
   ArrowLeft,
   Calendar,
   CheckCircle2,
   Clock,
   Coins,
   Copy,
-  ExternalLink,
   FileCheck,
-  FileDown,
-  FileText,
   History,
-  Layers,
   Printer,
   ShieldAlert,
   User,
@@ -23,9 +18,23 @@ import {
 import { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ExportMenu } from "@/components/export-menu"
+import {
+  authenticityHash,
+  buildDossierHtml,
+  dossierToText,
+  exportDossierCsv,
+  exportDossierDoc,
+  exportDossierHtml,
+  exportDossierJson,
+  exportDossierMarkdown,
+  exportDossierPdf,
+  exportDossierTxt,
+  exportDossierXlsx,
+} from "@/lib/export-utils"
 import type { ActionDossier, DocumentStatus } from "@/lib/types"
 
 interface ProntuarioViewProps {
@@ -82,10 +91,25 @@ export function ProntuarioView({ dossier, onBack }: ProntuarioViewProps) {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button onClick={() => window.print()} className="gap-2" size="sm">
-            <FileDown className="size-4" />
-            Exportar Dossiê em PDF
-          </Button>
+          <ExportMenu
+            label="Exportar Dossiê"
+            documentTitle={`Prontuário Vivo — ${dossier.canonicalId}`}
+            documentSubtitle={`${dossier.name} · Processo SEI: ${dossier.seiProcess}`}
+            documentHash={authenticityHash(`${dossier.canonicalId}|${dossier.seiProcess}|${dossier.progress}|${dossier.status}`)}
+            itemCount={dossier.documents.length}
+            category="Prontuário Vivo"
+            onPdf={() => exportDossierPdf(dossier)}
+            onDoc={() => exportDossierDoc(dossier)}
+            onHtml={() => exportDossierHtml(dossier)}
+            onExcel={() => exportDossierXlsx(dossier)}
+            onCsv={() => exportDossierCsv(dossier)}
+            onJson={() => exportDossierJson(dossier)}
+            onTxt={() => exportDossierTxt(dossier)}
+            onMarkdown={() => exportDossierMarkdown(dossier)}
+            buildText={() => dossierToText(dossier)}
+            buildHtmlPreview={() => buildDossierHtml(dossier)}
+            buildJsonData={() => dossier}
+          />
         </div>
       </div>
 
@@ -275,7 +299,7 @@ export function ProntuarioView({ dossier, onBack }: ProntuarioViewProps) {
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-lg border border-border">
+          <div className="scroll-touch overflow-x-auto rounded-lg border border-border">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/40 text-xs">

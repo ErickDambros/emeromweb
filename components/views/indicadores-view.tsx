@@ -24,6 +24,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { ExportMenu } from "@/components/export-menu"
+import {
+  authenticityHash,
+  datasetToText,
+  exportDatasetCsv,
+  exportDatasetHtml,
+  exportDatasetJson,
+  exportDatasetMarkdown,
+  exportDatasetTxt,
+  exportDatasetXlsx,
+} from "@/lib/export-utils"
 import { useDataStore } from "@/components/data-store"
 import { EmptyState } from "@/components/empty-state"
 import { KpiCard } from "@/components/kpi-card"
@@ -53,7 +64,7 @@ const AGG_LABELS: Record<Aggregation, string> = {
 }
 
 export function IndicadoresView() {
-  const { activeDataset } = useDataStore()
+  const { filteredDataset: activeDataset } = useDataStore()
 
   const cats = activeDataset ? categoryColumns(activeDataset) : []
   const nums = activeDataset ? numericColumns(activeDataset) : []
@@ -136,9 +147,34 @@ export function IndicadoresView() {
 
       {/* Controles de análise */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Análise dinâmica</CardTitle>
-          <CardDescription>Combine dimensão, medida e agregação para investigar os dados.</CardDescription>
+        <CardHeader className="flex flex-col gap-3 pb-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <CardTitle className="text-base">Análise dinâmica e Indicadores</CardTitle>
+            <CardDescription>Combine dimensão, medida e agregação para investigar os dados.</CardDescription>
+          </div>
+          <ExportMenu
+            label="Exportar Dados"
+            variant="outline"
+            documentTitle={`Indicadores e Dados — ${activeDataset.sheetName}`}
+            documentSubtitle={`Fonte: ${activeDataset.fileName} · ${activeDataset.rowCount} registros · ${activeDataset.columns.length} colunas`}
+            documentHash={authenticityHash(`${activeDataset.fileName}|${activeDataset.sheetName}|${activeDataset.rowCount}`)}
+            itemCount={activeDataset.rowCount}
+            category="Indicadores & Dados"
+            onExcel={() => exportDatasetXlsx(activeDataset)}
+            onCsv={() => exportDatasetCsv(activeDataset)}
+            onJson={() => exportDatasetJson(activeDataset)}
+            onHtml={() => exportDatasetHtml(activeDataset)}
+            onTxt={() => exportDatasetTxt(activeDataset)}
+            onMarkdown={() => exportDatasetMarkdown(activeDataset)}
+            buildText={() => datasetToText(activeDataset)}
+            buildJsonData={() => ({
+              tabela: activeDataset.sheetName,
+              arquivo: activeDataset.fileName,
+              registros: activeDataset.rowCount,
+              colunas: activeDataset.columns,
+              amostra: activeDataset.rows.slice(0, 10),
+            })}
+          />
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-3">
           <Control label="Dimensão">
@@ -193,7 +229,8 @@ export function IndicadoresView() {
             <CardTitle className="text-base">{measureLabel} por {dim}</CardTitle>
             <CardDescription>Top {chartData.length} categorias</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="scroll-touch overflow-x-auto">
+            <div className="min-w-[480px]">
             <ResponsiveContainer width="100%" height={320}>
               <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
                 <XAxis
@@ -217,6 +254,7 @@ export function IndicadoresView() {
                 <Bar dataKey="value" radius={[4, 4, 0, 0]} fill="var(--chart-1)" />
               </BarChart>
             </ResponsiveContainer>
+            </div>
           </CardContent>
         </Card>
 
@@ -305,7 +343,7 @@ export function IndicadoresView() {
           <CardTitle className="text-base">Amostra dos dados</CardTitle>
           <CardDescription>Primeiras 8 linhas de {activeDataset.sheetName}</CardDescription>
         </CardHeader>
-        <CardContent className="overflow-x-auto">
+        <CardContent className="scroll-touch overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
