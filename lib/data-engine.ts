@@ -50,9 +50,31 @@ export async function parseFile(file: File): Promise<DataSource> {
 
     for (const sheetName of wb.SheetNames) {
       const ws = wb.Sheets[sheetName]
+      if (!ws || !ws["!ref"]) continue
+
+      // Tenta ler com cabeçalho padrão
+      let rawRows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: null, raw: true })
+      if (!rawRows || rawRows.length === 0) continue
+
+      // Encontra a linha com maior quantidade de cabeçalhos válidos nos primeiros 6 índices
+      let headerRowIndex = 0
+      let maxCols = 0
+
+      for (let r = 0; r < Math.min(rawRows.length, 6); r++) {
+        const row = rawRows[r]
+        if (Array.isArray(row)) {
+          const filledStrings = row.filter((c) => typeof c === "string" && c.trim().length > 0)
+          if (filledStrings.length > maxCols) {
+            maxCols = filledStrings.length
+            headerRowIndex = r
+          }
+        }
+      }
+
       const json = XLSX.utils.sheet_to_json<Record<string, CellValue>>(ws, {
         defval: null,
         raw: true,
+        range: headerRowIndex,
       })
       if (json.length === 0) continue
 
