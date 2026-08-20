@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertTriangle, FileSpreadsheet, FileText, FileWarning, Table2, Trash2 } from "lucide-react"
+import { AlertTriangle, FileSpreadsheet, FileText, FileType, FileWarning, Table2, Trash2 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,6 +11,7 @@ import type { DataSource } from "@/lib/types"
 const kindIcon = {
   spreadsheet: FileSpreadsheet,
   pdf: FileText,
+  docx: FileType,
   unsupported: FileWarning,
 }
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import {
   ArrowLeft,
   ArrowRight,
@@ -29,6 +29,8 @@ interface SpotlightStep {
   icon: typeof Database
   viewKey?: "fontes" | "indicadores" | "prioridades" | "agendas" | "relatorios"
   preferredPlacement?: "right" | "bottom" | "top" | "left"
+  /** Passos cujo alvo deve permanecer 100% livre para uso real (upload de arquivo, chatbot) */
+  freeInteraction?: boolean
 }
 
 const SPOTLIGHT_STEPS: SpotlightStep[] = [
@@ -36,7 +38,7 @@ const SPOTLIGHT_STEPS: SpotlightStep[] = [
     targetId: "tutorial-nav-fontes",
     title: "1. Fontes de Dados (Upload Universal)",
     instruction:
-      "Comece por aqui: clique em Fontes de Dados para unificar planilhas Excel (.xlsx, .csv) e processos em PDF. O processamento acontece 100% no seu navegador.",
+      "Comece por aqui: clique em Fontes de Dados para unificar planilhas Excel (.xlsx, .csv), documentos PDF e Word (.docx). O processamento acontece 100% no seu navegador.",
     hint: "Dica: clique diretamente no botão iluminado ou em 'Próximo'.",
     icon: Database,
     viewKey: "fontes",
@@ -46,11 +48,12 @@ const SPOTLIGHT_STEPS: SpotlightStep[] = [
     targetId: "tutorial-upload-zone",
     title: "2. Ingestão & Amostra Oficial",
     instruction:
-      "Arraste seus arquivos para esta área ou utilize o botão 'Ver dados de exemplo' no topo para carregar a base de demonstração da EMERON.",
-    hint: "Planilhas e PDFs são analisados e estruturados instantaneamente.",
+      "Arraste seus arquivos para esta área ou utilize o botão 'Ver dados de exemplo' no topo para carregar a base de demonstração da EMERON. Você pode testar o envio de um arquivo livremente agora.",
+    hint: "Planilhas, PDFs e documentos Word são anexados e estruturados instantaneamente.",
     icon: Sparkles,
     viewKey: "fontes",
     preferredPlacement: "bottom",
+    freeInteraction: true,
   },
   {
     targetId: "tutorial-nav-indicadores",
@@ -76,10 +79,11 @@ const SPOTLIGHT_STEPS: SpotlightStep[] = [
     targetId: "tutorial-assistant-trigger",
     title: "5. Assistente RADAR (Central de Ajuda)",
     instruction:
-      "Ficou com alguma dúvida? Clique neste botão no canto inferior direito para tirar dúvidas sobre o sistema e consultar métricas em tempo real. Funciona 100% offline!",
+      "Ficou com alguma dúvida? Clique neste botão no canto inferior direito para tirar dúvidas sobre o sistema e consultar métricas em tempo real. Funciona 100% offline! Você pode abrir e usar o chat livremente agora.",
     hint: "Central de Ajuda determinística e instantânea, sem menção a IA.",
     icon: HelpCircle,
     preferredPlacement: "left",
+    freeInteraction: true,
   },
 ]
 
@@ -90,6 +94,13 @@ export function OnboardingTutorial({ isOpen, onClose, onNavigateStep }: Onboardi
   const step = SPOTLIGHT_STEPS[currentStep]
   const isFirst = currentStep === 0
   const isLast = currentStep === SPOTLIGHT_STEPS.length - 1
+
+  // Ref (não state) para o listener de bloqueio ler o alvo ativo sem precisar
+  // recriar o listener a cada troca de passo.
+  const activeTargetIdRef = useRef<string | null>(null)
+  useEffect(() => {
+    activeTargetIdRef.current = step?.targetId ?? null
+  }, [step])
 
   // Atualiza posição do elemento alvo
   useEffect(() => {
@@ -113,15 +124,69 @@ export function OnboardingTutorial({ isOpen, onClose, onNavigateStep }: Onboardi
     const timer1 = setTimeout(updateRect, 60)
     const timer2 = setTimeout(updateRect, 200)
     window.addEventListener("resize", updateRect)
-    window.addEventListener("scroll", updateRect)
+    window.addEventListener("scroll", updateRect, true)
 
     return () => {
       clearTimeout(timer1)
       clearTimeout(timer2)
       window.removeEventListener("resize", updateRect)
-      window.removeEventListener("scroll", updateRect)
+      window.removeEventListener("scroll", updateRect, true)
     }
   }, [isOpen, currentStep, step, onNavigateStep])
+
+  // Avança automaticamente quando o usuário clica no elemento real destacado
+  // (exceto nos passos "livres" — upload de arquivo e chatbot — onde o usuário
+  // deve poder interagir várias vezes sem pular o passo).
+  useEffect(() => {
+    if (!isOpen || !step || step.freeInteraction) return
+    const timer = setTimeout(() => {
+      const el = document.getElementById(step.targetId)
+      if (!el) return
+      const onTargetClick = () => setCurrentStep((s) => Math.min(s + 1, SPOTLIGHT_STEPS.length - 1))
+      el.addEventListener("click", onTargetClick)
+      // Marca para limpeza
+      ;(el as HTMLElement & { __tutorialCleanup?: () => void }).__tutorialCleanup = () =>
+        el.removeEventListener("click", onTargetClick)
+    }, 220)
+
+    return () => {
+      clearTimeout(timer)
+      const el = document.getElementById(step.targetId) as (HTMLElement & { __tutorialCleanup?: () => void }) | null
+      el?.__tutorialCleanup?.()
+    }
+  }, [isOpen, currentStep, step])
+
+  // Bloqueia interação com o resto do site enquanto o tutorial está ativo,
+  // liberando apenas: os controles do próprio tutorial, a zona de upload de
+  // arquivos e o Assistente RADAR (chatbot) — conforme pedido, para não
+  // travar demonstrações reais desses dois pontos.
+  useEffect(() => {
+    if (!isOpen) return
+
+    const FREE_SELECTORS = ["#tutorial-upload-zone", "#assistant-drawer-root"]
+
+    const guard = (e: Event) => {
+      const target = e.target as HTMLElement | null
+      if (!target) return
+      if (target.closest("[data-tutorial-card]")) return
+      if (FREE_SELECTORS.some((sel) => target.closest(sel))) return
+      // O elemento iluminado do passo atual também deve permanecer clicável
+      const activeId = activeTargetIdRef.current
+      if (activeId && target.closest(`#${CSS.escape(activeId)}`)) return
+      e.preventDefault()
+      e.stopPropagation()
+    }
+
+    document.addEventListener("click", guard, true)
+    document.addEventListener("pointerdown", guard, true)
+    document.addEventListener("keydown", guard, true)
+
+    return () => {
+      document.removeEventListener("click", guard, true)
+      document.removeEventListener("pointerdown", guard, true)
+      document.removeEventListener("keydown", guard, true)
+    }
+  }, [isOpen])
 
   if (!isOpen) return null
 
@@ -148,14 +213,6 @@ export function OnboardingTutorial({ isOpen, onClose, onNavigateStep }: Onboardi
     }
   }
 
-  const handleHighlightClick = () => {
-    const el = document.getElementById(step.targetId)
-    if (el) {
-      el.click()
-    }
-    handleNext()
-  }
-
   const Icon = step.icon
 
   // Dimensões do recorte iluminado
@@ -164,69 +221,29 @@ export function OnboardingTutorial({ isOpen, onClose, onNavigateStep }: Onboardi
   const cutLeft = targetRect ? Math.max(0, targetRect.left - padding) : 0
   const cutWidth = targetRect ? targetRect.width + padding * 2 : 0
   const cutHeight = targetRect ? targetRect.height + padding * 2 : 0
-  const cutBottom = cutTop + cutHeight
-  const cutRight = cutLeft + cutWidth
-
-  // Bloqueio de cliques externos
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    e.stopPropagation()
-    e.preventDefault()
-  }
 
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="tutorial-step-title"
-      className="fixed inset-0 z-50 overflow-hidden font-sans"
+      className="pointer-events-none fixed inset-0 z-50 overflow-hidden font-sans"
     >
-      {/* 4 Painéis de Fundo Escuro que bloqueiam qualquer clique fora e deixam o alvo 100% claro */}
+      {/* Fundo escuro com recorte iluminado (apenas visual — o bloqueio real de
+          cliques é feito pelo listener em fase de captura acima) */}
       {targetRect ? (
-        <>
-          {/* Painel Superior */}
-          <div
-            onClick={handleBackdropClick}
-            style={{ top: 0, left: 0, right: 0, height: `${cutTop}px` }}
-            className="fixed z-40 bg-black/75 backdrop-blur-xs transition-all duration-200"
-          />
-          {/* Painel Inferior */}
-          <div
-            onClick={handleBackdropClick}
-            style={{ top: `${cutBottom}px`, left: 0, right: 0, bottom: 0 }}
-            className="fixed z-40 bg-black/75 backdrop-blur-xs transition-all duration-200"
-          />
-          {/* Painel Esquerdo */}
-          <div
-            onClick={handleBackdropClick}
-            style={{ top: `${cutTop}px`, left: 0, width: `${cutLeft}px`, height: `${cutHeight}px` }}
-            className="fixed z-40 bg-black/75 backdrop-blur-xs transition-all duration-200"
-          />
-          {/* Painel Direito */}
-          <div
-            onClick={handleBackdropClick}
-            style={{ top: `${cutTop}px`, left: `${cutRight}px`, right: 0, height: `${cutHeight}px` }}
-            className="fixed z-40 bg-black/75 backdrop-blur-xs transition-all duration-200"
-          />
-
-          {/* Anel luminoso interativo sobre o elemento destacado (Totalmente Claro e Clicável) */}
-          <div
-            onClick={handleHighlightClick}
-            style={{
-              top: `${cutTop}px`,
-              left: `${cutLeft}px`,
-              width: `${cutWidth}px`,
-              height: `${cutHeight}px`,
-            }}
-            className="fixed z-50 cursor-pointer rounded-xl border-2 border-primary ring-4 ring-primary/50 shadow-[0_0_35px_rgba(46,118,170,0.85)] transition-all duration-200 hover:ring-primary focus:outline-none"
-            title="Clique aqui para acionar e avançar"
-          />
-        </>
-      ) : (
-        /* Fallback Backdrop se o elemento não for localizado na tela */
         <div
-          onClick={handleBackdropClick}
-          className="fixed inset-0 z-40 bg-black/75 backdrop-blur-xs"
+          style={{
+            top: `${cutTop}px`,
+            left: `${cutLeft}px`,
+            width: `${cutWidth}px`,
+            height: `${cutHeight}px`,
+            boxShadow: "0 0 0 9999px rgba(0,0,0,0.75)",
+          }}
+          className="pointer-events-none fixed z-40 rounded-xl border-2 border-primary ring-4 ring-primary/50 shadow-[0_0_35px_rgba(46,118,170,0.85)] transition-all duration-200"
         />
+      ) : (
+        <div className="pointer-events-none fixed inset-0 z-40 bg-black/75 backdrop-blur-xs" />
       )}
 
       {/* Card Flutuante de Instrução (Moderno & Conciso) */}
@@ -234,9 +251,12 @@ export function OnboardingTutorial({ isOpen, onClose, onNavigateStep }: Onboardi
         className="pointer-events-auto fixed z-50 max-w-md animate-in fade-in zoom-in-95 duration-200"
         style={getCardPosition(targetRect, step.preferredPlacement)}
       >
-        <div className="overflow-hidden rounded-xl border border-border bg-card/95 p-5 shadow-2xl backdrop-blur-md">
+        <div
+          data-tutorial-card
+          className="flex max-h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-card/95 shadow-2xl backdrop-blur-md"
+        >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-border/70 pb-3">
+          <div className="flex shrink-0 items-center justify-between border-b border-border/70 px-5 pb-3 pt-5">
             <div className="flex items-center gap-2">
               <div className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                 <Icon className="size-4" />
@@ -256,8 +276,8 @@ export function OnboardingTutorial({ isOpen, onClose, onNavigateStep }: Onboardi
             </Button>
           </div>
 
-          {/* Título & Instrução */}
-          <div className="mt-3 space-y-2">
+          {/* Título & Instrução (rolável se necessário, nunca empurra os botões pra fora) */}
+          <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-5 py-3">
             <h3 id="tutorial-step-title" className="text-sm font-bold text-foreground sm:text-base">
               {step.title}
             </h3>
@@ -265,8 +285,8 @@ export function OnboardingTutorial({ isOpen, onClose, onNavigateStep }: Onboardi
             <p className="text-[11px] font-medium text-primary">{step.hint}</p>
           </div>
 
-          {/* Barra de Ações */}
-          <div className="mt-4 flex items-center justify-between border-t border-border/70 pt-3">
+          {/* Barra de Ações — sempre visível */}
+          <div className="flex shrink-0 items-center justify-between border-t border-border/70 px-5 pb-5 pt-3">
             <Button
               variant="ghost"
               size="sm"
@@ -331,7 +351,10 @@ function getCardPosition(rect: DOMRect | null, preferred = "right"): React.CSSPr
   }
 
   const cardWidth = 380
-  const cardHeight = 220
+  // Estimativa conservadora — a altura real é limitada por max-height + scroll
+  // interno no próprio card, então uma folga aqui só evita reposicionamentos
+  // bruscos, nunca corta os botões (isso é garantido pelo CSS do card).
+  const cardHeight = 280
   const spaceRight = window.innerWidth - rect.right
   const spaceLeft = rect.left
   const spaceBottom = window.innerHeight - rect.bottom

@@ -34,6 +34,15 @@ export async function parseFile(file: File): Promise<DataSource> {
     }
   }
 
+  if (ext === "docx" || ext === "doc") {
+    return {
+      ...base,
+      kind: "docx",
+      datasets: [],
+      note: "Documento Word anexado como fonte institucional. Usado nos relatórios; a extração de texto de Word não é analisada nesta versão.",
+    }
+  }
+
   if (!SPREADSHEET_EXT.includes(ext)) {
     return {
       ...base,

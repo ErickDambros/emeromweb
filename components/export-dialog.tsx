@@ -5,6 +5,7 @@ import {
   Calendar,
   Check,
   CheckCircle2,
+  CheckSquare,
   ClipboardCopy,
   Code2,
   Download,
@@ -14,10 +15,10 @@ import {
   FileText,
   Globe,
   Layers,
-  Package,
   Printer,
   ShieldCheck,
   Sparkles,
+  X as XIcon,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { copyToClipboard } from "@/lib/export-utils"
+import { cn } from "@/lib/utils"
 
 export interface ExportDialogProps {
   isOpen: boolean
@@ -93,6 +95,10 @@ export function ExportDialog({
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [downloadSuccess, setDownloadSuccess] = useState<string | null>(null)
 
+  // Modo de seleção — permite escolher quais formatos baixar antes de confirmar
+  const [selectionMode, setSelectionMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
   // Opções customizáveis de exportação
   const [includeHeader, setIncludeHeader] = useState(true)
   const [includeHash, setIncludeHash] = useState(true)
@@ -119,20 +125,42 @@ export function ExportDialog({
     }
   }
 
-  // Baixar pacote completo com todos os formatos principais
-  const handleBatchDownload = async () => {
+  const toggleSelectionMode = () => {
+    setActiveTab("formats")
+    setSelectionMode((prev) => {
+      if (prev) setSelectedIds(new Set())
+      return !prev
+    })
+  }
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const selectAll = () => setSelectedIds(new Set(formats.map((f) => f.id)))
+
+  // Baixa apenas os formatos marcados no modo de seleção
+  const handleDownloadSelection = async () => {
     try {
-      if (onDoc) await onDoc()
-      if (onExcel) await onExcel()
-      if (onCsv) await onCsv()
-      if (onJson) await onJson()
-      if (onMarkdown) await onMarkdown()
-      if (onHtml) await onHtml()
-      if (onIcs) await onIcs()
-      setDownloadSuccess("batch")
+      for (const fmt of formats) {
+        if (!selectedIds.has(fmt.id)) continue
+        if (fmt.isCopy && buildText) {
+          await copyToClipboard(buildText())
+        } else if (fmt.onAction) {
+          await fmt.onAction()
+        }
+      }
+      setDownloadSuccess("selection")
       setTimeout(() => setDownloadSuccess(null), 4000)
+      setSelectionMode(false)
+      setSelectedIds(new Set())
     } catch (err) {
-      console.error("Erro no batch download:", err)
+      console.error("Erro ao baixar seleção:", err)
     }
   }
 
@@ -148,8 +176,8 @@ export function ExportDialog({
         category: "doc",
         badges: ["Oficial TJ-RO", "A4 Padronizado", "Gráficos SVG", "Diálogo de Impressão"],
         icon: Printer,
-        iconColor: "text-rose-600 dark:text-rose-400",
-        iconBg: "bg-rose-500/10 border-rose-500/20",
+        iconColor: "text-chart-4",
+        iconBg: "bg-chart-4/10 border-chart-4/20",
         actionLabel: "Imprimir / Salvar PDF",
         onAction: onPdf,
       })
@@ -164,8 +192,8 @@ export function ExportDialog({
         category: "doc",
         badges: ["DOCX Nativo", "MS Word & LibreOffice", "Tabelas Sombreadas"],
         icon: FileText,
-        iconColor: "text-blue-600 dark:text-blue-400",
-        iconBg: "bg-blue-500/10 border-blue-500/20",
+        iconColor: "text-primary",
+        iconBg: "bg-primary/10 border-primary/20",
         actionLabel: "Baixar Documento .docx",
         onAction: onDoc,
       })
@@ -180,8 +208,8 @@ export function ExportDialog({
         category: "data",
         badges: ["ExcelJS", "Banners TJ-RO", "Bordas & Cores", "Moeda R$"],
         icon: FileSpreadsheet,
-        iconColor: "text-emerald-600 dark:text-emerald-400",
-        iconBg: "bg-emerald-500/10 border-emerald-500/20",
+        iconColor: "text-chart-3",
+        iconBg: "bg-chart-3/10 border-chart-3/20",
         actionLabel: "Baixar Planilha .xlsx",
         onAction: onExcel,
       })
@@ -194,8 +222,8 @@ export function ExportDialog({
         category: "data",
         badges: ["UTF-8 com BOM", "Delimitador ;", "Compatível pt-BR"],
         icon: FileCode,
-        iconColor: "text-teal-600 dark:text-teal-400",
-        iconBg: "bg-teal-500/10 border-teal-500/20",
+        iconColor: "text-chart-2",
+        iconBg: "bg-chart-2/10 border-chart-2/20",
         actionLabel: "Baixar Arquivo .csv",
         onAction: onCsv,
       })
@@ -210,8 +238,8 @@ export function ExportDialog({
         category: "data",
         badges: ["JSON Schema", "Auditoria", "API Ready"],
         icon: Code2,
-        iconColor: "text-amber-600 dark:text-amber-400",
-        iconBg: "bg-amber-500/10 border-amber-500/20",
+        iconColor: "text-chart-5",
+        iconBg: "bg-chart-5/10 border-chart-5/20",
         actionLabel: "Baixar Dados .json",
         onAction: onJson,
       })
@@ -226,8 +254,8 @@ export function ExportDialog({
         category: "doc",
         badges: ["Autocontido", "Visualização Offline", "HTML5"],
         icon: Globe,
-        iconColor: "text-sky-600 dark:text-sky-400",
-        iconBg: "bg-sky-500/10 border-sky-500/20",
+        iconColor: "text-primary",
+        iconBg: "bg-primary/10 border-primary/20",
         actionLabel: "Baixar Página .html",
         onAction: onHtml,
       })
@@ -242,8 +270,8 @@ export function ExportDialog({
         category: "data",
         badges: ["RFC 5545", "Outlook & Google", "Apple Calendar"],
         icon: Calendar,
-        iconColor: "text-purple-600 dark:text-purple-400",
-        iconBg: "bg-purple-500/10 border-purple-500/20",
+        iconColor: "text-chart-2",
+        iconBg: "bg-chart-2/10 border-chart-2/20",
         actionLabel: "Baixar Calendário .ics",
         onAction: onIcs,
       })
@@ -258,8 +286,8 @@ export function ExportDialog({
         category: "text",
         badges: ["Markdown Rico", "Tabelas & Checklist", "Despachos SEI"],
         icon: FileCode,
-        iconColor: "text-orange-600 dark:text-orange-400",
-        iconBg: "bg-orange-500/10 border-orange-500/20",
+        iconColor: "text-chart-3",
+        iconBg: "bg-chart-3/10 border-chart-3/20",
         actionLabel: "Baixar Nota .md",
         onAction: onMarkdown,
       })
@@ -274,8 +302,8 @@ export function ExportDialog({
         category: "text",
         badges: ["Texto Puro", "Universal", "Anexo Processual"],
         icon: FileText,
-        iconColor: "text-slate-600 dark:text-slate-400",
-        iconBg: "bg-slate-500/10 border-slate-500/20",
+        iconColor: "text-muted-foreground",
+        iconBg: "bg-muted border-border",
         actionLabel: "Baixar Arquivo .txt",
         onAction: onTxt,
       })
@@ -363,8 +391,8 @@ export function ExportDialog({
             <div className="mt-3 flex items-center gap-2 rounded-md bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300 animate-in fade-in slide-in-from-top-1">
               <CheckCircle2 className="size-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
               <span>
-                {downloadSuccess === "batch"
-                  ? "Pacote completo com múltiplos formatos baixado com sucesso!"
+                {downloadSuccess === "selection"
+                  ? "Seleção baixada com sucesso no seu computador!"
                   : "Arquivo gerado e baixado com sucesso no seu computador!"}
               </span>
             </div>
@@ -399,25 +427,52 @@ export function ExportDialog({
           <div className="flex-1 overflow-y-auto p-5 md:p-6 bg-muted/10">
             {/* ABA 1: GRADE ESTILO iLovePDF */}
             <TabsContent value="formats" className="m-0 space-y-5">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h3 className="text-sm font-semibold text-foreground">
-                    Escolha o formato desejado
+                    {selectionMode ? "Selecione os formatos para baixar" : "Escolha o formato desejado"}
                   </h3>
                   <p className="text-xs text-muted-foreground">
-                    Clique em qualquer cartão para baixar ou processar imediatamente.
+                    {selectionMode
+                      ? "Marque um ou mais cartões e confirme o download da seleção."
+                      : "Clique em qualquer cartão para baixar ou processar imediatamente."}
                   </p>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleBatchDownload}
-                  className="gap-1.5 text-xs border-primary/40 text-primary hover:bg-primary/10"
-                  title="Baixa automaticamente os principais formatos de uma só vez"
-                >
-                  <Package className="size-4" />
-                  <span className="hidden sm:inline">Baixar Pacote Completo</span>
-                </Button>
+
+                {selectionMode ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary" className="text-xs font-semibold">
+                      {selectedIds.size} selecionado{selectedIds.size === 1 ? "" : "s"}
+                    </Badge>
+                    <Button variant="ghost" size="sm" onClick={selectAll} className="h-8 text-xs">
+                      Selecionar todos
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={handleDownloadSelection}
+                      disabled={selectedIds.size === 0}
+                      className="h-8 gap-1.5 text-xs"
+                    >
+                      <Download className="size-3.5" />
+                      Baixar Seleção
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={toggleSelectionMode} className="h-8 gap-1.5 text-xs">
+                      <XIcon className="size-3.5" />
+                      Cancelar
+                    </Button>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={toggleSelectionMode}
+                    className="gap-1.5 text-xs border-primary/40 text-primary hover:bg-primary/10"
+                    title="Escolha quais formatos deseja baixar antes de confirmar"
+                  >
+                    <CheckSquare className="size-4" />
+                    <span className="hidden sm:inline">Baixar Seleção</span>
+                  </Button>
+                )}
               </div>
 
               {/* Grid Responsivo de Formatos */}
@@ -426,21 +481,41 @@ export function ExportDialog({
                   const Icon = fmt.icon
                   const isCopied = copiedId === fmt.id
                   const isSuccess = downloadSuccess === fmt.id
+                  const isSelected = selectedIds.has(fmt.id)
 
                   return (
                     <div
                       key={fmt.id}
-                      onClick={() => handleAction(fmt.id, fmt.onAction, fmt.isCopy)}
-                      className="group relative flex cursor-pointer flex-col justify-between rounded-xl border border-border bg-card p-4 transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-md"
+                      onClick={() =>
+                        selectionMode ? toggleSelected(fmt.id) : handleAction(fmt.id, fmt.onAction, fmt.isCopy)
+                      }
+                      className={cn(
+                        "group relative flex cursor-pointer flex-col justify-between rounded-xl border bg-card p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md",
+                        isSelected ? "border-primary ring-2 ring-primary/30" : "border-border hover:border-primary/60",
+                      )}
                     >
+                      {selectionMode && (
+                        <div
+                          className={cn(
+                            "absolute right-3 top-3 flex size-5 items-center justify-center rounded-md border-2 transition-colors",
+                            isSelected
+                              ? "border-primary bg-primary text-primary-foreground"
+                              : "border-border bg-card text-transparent",
+                          )}
+                        >
+                          <Check className="size-3.5" />
+                        </div>
+                      )}
                       <div className="space-y-2.5">
                         <div className="flex items-start justify-between gap-2">
                           <div className={`flex size-10 items-center justify-center rounded-lg border ${fmt.iconBg} ${fmt.iconColor} transition-transform group-hover:scale-105`}>
                             <Icon className="size-5" />
                           </div>
-                          <span className="font-mono text-[11px] font-bold text-muted-foreground group-hover:text-foreground">
-                            {fmt.ext}
-                          </span>
+                          {!selectionMode && (
+                            <span className="font-mono text-[11px] font-bold text-muted-foreground group-hover:text-foreground">
+                              {fmt.ext}
+                            </span>
+                          )}
                         </div>
 
                         <div>
@@ -461,14 +536,16 @@ export function ExportDialog({
                         </div>
                       </div>
 
-                      <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between text-xs font-semibold">
-                        <span className={isCopied || isSuccess ? "text-emerald-600 dark:text-emerald-400" : "text-primary"}>
-                          {isCopied ? "Copiado com Sucesso!" : isSuccess ? "Baixado com Sucesso!" : fmt.actionLabel}
-                        </span>
-                        <div className="flex size-6 items-center justify-center rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
-                          {isCopied || isSuccess ? <Check className="size-3.5" /> : <Download className="size-3.5" />}
+                      {!selectionMode && (
+                        <div className="mt-4 pt-3 border-t border-border/60 flex items-center justify-between text-xs font-semibold">
+                          <span className={isCopied || isSuccess ? "text-emerald-600 dark:text-emerald-400" : "text-primary"}>
+                            {isCopied ? "Copiado com Sucesso!" : isSuccess ? "Baixado com Sucesso!" : fmt.actionLabel}
+                          </span>
+                          <div className="flex size-6 items-center justify-center rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
+                            {isCopied || isSuccess ? <Check className="size-3.5" /> : <Download className="size-3.5" />}
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   )
                 })}
@@ -587,10 +664,22 @@ export function ExportDialog({
             <Button variant="outline" size="sm" onClick={onClose} className="text-xs">
               Fechar
             </Button>
-            <Button size="sm" onClick={handleBatchDownload} className="gap-1.5 text-xs">
-              <Download className="size-4" />
-              Baixar Pacote Completo
-            </Button>
+            {selectionMode ? (
+              <Button
+                size="sm"
+                onClick={handleDownloadSelection}
+                disabled={selectedIds.size === 0}
+                className="gap-1.5 text-xs"
+              >
+                <Download className="size-4" />
+                Baixar Seleção ({selectedIds.size})
+              </Button>
+            ) : (
+              <Button size="sm" onClick={toggleSelectionMode} className="gap-1.5 text-xs">
+                <CheckSquare className="size-4" />
+                Baixar Seleção
+              </Button>
+            )}
           </div>
         </div>
       </DialogContent>

@@ -224,3 +224,30 @@ html.high-contrast button {
   text-decoration: underline !important;
 }
 
+/* ========================================================================== */
+/* VLibras — reposicionamento para não colidir com o Assistente RADAR       */
+/* O Assistente ocupa bottom-5/right-5 (20px, ~52px de altura). Deslocamos  */
+/* o botão do VLibras para cima dessa área e mantemos seu z-index abaixo do */
+/* Assistente (z-40) e do tutorial (z-50) para nunca sumir atrás deles.     */
+/* ========================================================================== */
+div[vw] {
+  z-index: 30 !important;
+}
+div[vw] .vw-access-button {
+  position: fixed !important;
+  right: 20px !important;
+  bottom: 92px !important;
+  top: auto !important;
+  left: auto !important;
+  z-index: 30 !important;
+}
+div[vw] .vw-plugin-wrapper {
+  z-index: 30 !important;
+}
+@media (max-width: 640px) {
+  div[vw] .vw-access-button {
+    bottom: 84px !important;
+    right: 14px !important;
+  }
+}
+

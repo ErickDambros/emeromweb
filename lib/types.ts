@@ -20,7 +20,7 @@ export interface Dataset {
   rowCount: number
 }
 
-export type SourceKind = "spreadsheet" | "pdf" | "unsupported"
+export type SourceKind = "spreadsheet" | "pdf" | "docx" | "unsupported"
 
 export interface DataSource {
   id: string

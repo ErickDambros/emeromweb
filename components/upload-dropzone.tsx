@@ -47,7 +47,7 @@ export function UploadDropzone({ compact = false }: { compact?: boolean }) {
         ref={inputRef}
         type="file"
         multiple
-        accept=".xlsx,.xls,.xlsm,.csv,.tsv,.ods,.pdf"
+        accept=".xlsx,.xls,.xlsm,.csv,.tsv,.ods,.pdf,.docx,.doc"
         className="hidden"
         onChange={(e) => handleFiles(e.target.files)}
       />
@@ -69,15 +69,15 @@ export function UploadDropzone({ compact = false }: { compact?: boolean }) {
         </p>
         {!compact && (
           <p className="mx-auto max-w-md text-pretty text-sm text-muted-foreground">
-            Unifique planilhas e documentos institucionais. Formatos aceitos: Excel (.xlsx, .xls), CSV, ODS e PDF. O
-            processamento acontece no seu navegador — nada é enviado a servidores.
+            Unifique planilhas e documentos institucionais. Formatos aceitos: Excel (.xlsx, .xls), CSV, ODS, PDF e
+            Word (.docx). O processamento acontece no seu navegador — nada é enviado a servidores.
           </p>
         )}
       </div>
       {!compact && (
         <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
           <FileSpreadsheet className="size-3.5" />
-          <span>xlsx · xls · csv · ods · pdf</span>
+          <span>xlsx · xls · csv · ods · pdf · docx</span>
         </div>
       )}
     </div>
