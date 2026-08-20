@@ -66,7 +66,10 @@ export function AssistantDrawer() {
   }
 
   return (
-    <div id="assistant-drawer-root" className="no-print fixed bottom-5 right-5 z-40">
+    <div
+      id="assistant-drawer-root"
+      className={`no-print fixed bottom-5 right-5 ${isOpen ? "z-50" : "z-40"}`}
+    >
       {/* Painel do Chat */}
       {isOpen && (
         <div

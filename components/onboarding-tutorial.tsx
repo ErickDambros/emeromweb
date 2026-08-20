@@ -95,14 +95,13 @@ export function OnboardingTutorial({ isOpen, onClose, onNavigateStep }: Onboardi
   const isFirst = currentStep === 0
   const isLast = currentStep === SPOTLIGHT_STEPS.length - 1
 
-  // Ref (não state) para o listener de bloqueio ler o alvo ativo sem precisar
-  // recriar o listener a cada troca de passo.
+  // Ref para o listener de bloqueio ler o alvo ativo sem recriar listeners desnecessariamente
   const activeTargetIdRef = useRef<string | null>(null)
   useEffect(() => {
     activeTargetIdRef.current = step?.targetId ?? null
   }, [step])
 
-  // Atualiza posição do elemento alvo
+  // Atualiza posição do elemento alvo e rola a tela se necessário
   useEffect(() => {
     if (!isOpen || !step) return
 
@@ -114,15 +113,16 @@ export function OnboardingTutorial({ isOpen, onClose, onNavigateStep }: Onboardi
     const updateRect = () => {
       const el = document.getElementById(step.targetId)
       if (el) {
+        // Rola suavemente o elemento para a área visível se estiver fora da tela
+        el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" })
         setTargetRect(el.getBoundingClientRect())
       } else {
         setTargetRect(null)
       }
     }
 
-    // Aguarda renderização da view para calcular as coordenadas exatas
-    const timer1 = setTimeout(updateRect, 60)
-    const timer2 = setTimeout(updateRect, 200)
+    const timer1 = setTimeout(updateRect, 80)
+    const timer2 = setTimeout(updateRect, 240)
     window.addEventListener("resize", updateRect)
     window.addEventListener("scroll", updateRect, true)
 
@@ -134,9 +134,7 @@ export function OnboardingTutorial({ isOpen, onClose, onNavigateStep }: Onboardi
     }
   }, [isOpen, currentStep, step, onNavigateStep])
 
-  // Avança automaticamente quando o usuário clica no elemento real destacado
-  // (exceto nos passos "livres" — upload de arquivo e chatbot — onde o usuário
-  // deve poder interagir várias vezes sem pular o passo).
+  // Avança automaticamente quando o usuário clica no elemento real destacado (exceto nos passos livres)
   useEffect(() => {
     if (!isOpen || !step || step.freeInteraction) return
     const timer = setTimeout(() => {
@@ -144,7 +142,6 @@ export function OnboardingTutorial({ isOpen, onClose, onNavigateStep }: Onboardi
       if (!el) return
       const onTargetClick = () => setCurrentStep((s) => Math.min(s + 1, SPOTLIGHT_STEPS.length - 1))
       el.addEventListener("click", onTargetClick)
-      // Marca para limpeza
       ;(el as HTMLElement & { __tutorialCleanup?: () => void }).__tutorialCleanup = () =>
         el.removeEventListener("click", onTargetClick)
     }, 220)
@@ -156,10 +153,8 @@ export function OnboardingTutorial({ isOpen, onClose, onNavigateStep }: Onboardi
     }
   }, [isOpen, currentStep, step])
 
-  // Bloqueia interação com o resto do site enquanto o tutorial está ativo,
-  // liberando apenas: os controles do próprio tutorial, a zona de upload de
-  // arquivos e o Assistente RADAR (chatbot) — conforme pedido, para não
-  // travar demonstrações reais desses dois pontos.
+  // Bloqueia rigorosamente a interação com o resto do site enquanto o tutorial está aberto.
+  // Permite interação APENAS com o card do tutorial, o alvo iluminado e as áreas livres (upload e chat).
   useEffect(() => {
     if (!isOpen) return
 
@@ -170,20 +165,25 @@ export function OnboardingTutorial({ isOpen, onClose, onNavigateStep }: Onboardi
       if (!target) return
       if (target.closest("[data-tutorial-card]")) return
       if (FREE_SELECTORS.some((sel) => target.closest(sel))) return
-      // O elemento iluminado do passo atual também deve permanecer clicável
       const activeId = activeTargetIdRef.current
       if (activeId && target.closest(`#${CSS.escape(activeId)}`)) return
+
+      // Bloqueia e impede propagação de qualquer outro clique ou tecla fora do tutorial
       e.preventDefault()
       e.stopPropagation()
     }
 
     document.addEventListener("click", guard, true)
     document.addEventListener("pointerdown", guard, true)
+    document.addEventListener("mousedown", guard, true)
+    document.addEventListener("touchstart", guard, true)
     document.addEventListener("keydown", guard, true)
 
     return () => {
       document.removeEventListener("click", guard, true)
       document.removeEventListener("pointerdown", guard, true)
+      document.removeEventListener("mousedown", guard, true)
+      document.removeEventListener("touchstart", guard, true)
       document.removeEventListener("keydown", guard, true)
     }
   }, [isOpen])
@@ -227,10 +227,9 @@ export function OnboardingTutorial({ isOpen, onClose, onNavigateStep }: Onboardi
       role="dialog"
       aria-modal="true"
       aria-labelledby="tutorial-step-title"
-      className="pointer-events-none fixed inset-0 z-50 overflow-hidden font-sans"
+      className="pointer-events-none fixed inset-0 z-60 overflow-hidden font-sans"
     >
-      {/* Fundo escuro com recorte iluminado (apenas visual — o bloqueio real de
-          cliques é feito pelo listener em fase de captura acima) */}
+      {/* Fundo escuro com recorte iluminado */}
       {targetRect ? (
         <div
           style={{
@@ -240,23 +239,23 @@ export function OnboardingTutorial({ isOpen, onClose, onNavigateStep }: Onboardi
             height: `${cutHeight}px`,
             boxShadow: "0 0 0 9999px rgba(0,0,0,0.75)",
           }}
-          className="pointer-events-none fixed z-40 rounded-xl border-2 border-primary ring-4 ring-primary/50 shadow-[0_0_35px_rgba(46,118,170,0.85)] transition-all duration-200"
+          className="pointer-events-none fixed z-50 rounded-xl border-2 border-primary ring-4 ring-primary/50 shadow-[0_0_35px_rgba(46,118,170,0.85)] transition-all duration-200"
         />
       ) : (
-        <div className="pointer-events-none fixed inset-0 z-40 bg-black/75 backdrop-blur-xs" />
+        <div className="pointer-events-none fixed inset-0 z-50 bg-black/75 backdrop-blur-xs" />
       )}
 
-      {/* Card Flutuante de Instrução (Moderno & Conciso) */}
+      {/* Card Flutuante de Instrução com layout à prova de cortes */}
       <div
-        className="pointer-events-auto fixed z-50 max-w-md animate-in fade-in zoom-in-95 duration-200"
+        className="pointer-events-auto fixed z-60 max-w-md animate-in fade-in zoom-in-95 duration-200"
         style={getCardPosition(targetRect, step.preferredPlacement)}
       >
         <div
           data-tutorial-card
-          className="flex max-h-[calc(100vh-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-card/95 shadow-2xl backdrop-blur-md"
+          className="flex max-h-[min(480px,calc(100vh-2rem))] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl backdrop-blur-md"
         >
-          {/* Header */}
-          <div className="flex shrink-0 items-center justify-between border-b border-border/70 px-5 pb-3 pt-5">
+          {/* Header Fixo */}
+          <div className="flex shrink-0 items-center justify-between border-b border-border/70 bg-card px-5 pb-3 pt-4">
             <div className="flex items-center gap-2">
               <div className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                 <Icon className="size-4" />
@@ -269,14 +268,14 @@ export function OnboardingTutorial({ isOpen, onClose, onNavigateStep }: Onboardi
               variant="ghost"
               size="icon"
               onClick={onClose}
-              className="size-6 text-muted-foreground hover:text-foreground"
+              className="size-7 text-muted-foreground hover:text-foreground"
               aria-label="Pular tutorial"
             >
-              <X className="size-3.5" />
+              <X className="size-4" />
             </Button>
           </div>
 
-          {/* Título & Instrução (rolável se necessário, nunca empurra os botões pra fora) */}
+          {/* Conteúdo com rolagem interna independente */}
           <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-5 py-3">
             <h3 id="tutorial-step-title" className="text-sm font-bold text-foreground sm:text-base">
               {step.title}
@@ -285,34 +284,34 @@ export function OnboardingTutorial({ isOpen, onClose, onNavigateStep }: Onboardi
             <p className="text-[11px] font-medium text-primary">{step.hint}</p>
           </div>
 
-          {/* Barra de Ações — sempre visível */}
-          <div className="flex shrink-0 items-center justify-between border-t border-border/70 px-5 pb-5 pt-3">
+          {/* Barra de Ações Fixa e Pinned — NUNCA sai da tela */}
+          <div className="flex shrink-0 items-center justify-between border-t border-border/70 bg-card/95 px-5 py-3">
             <Button
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+              className="h-8 px-2.5 text-xs text-muted-foreground hover:text-foreground"
             >
               Pular
             </Button>
 
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-2">
               {!isFirst && (
-                <Button variant="outline" size="sm" onClick={handlePrev} className="h-7 gap-1 px-2.5 text-xs">
-                  <ArrowLeft className="size-3" />
+                <Button variant="outline" size="sm" onClick={handlePrev} className="h-8 gap-1 px-3 text-xs">
+                  <ArrowLeft className="size-3.5" />
                   Anterior
                 </Button>
               )}
-              <Button size="sm" onClick={handleNext} className="h-7 gap-1 px-3 text-xs">
+              <Button size="sm" onClick={handleNext} className="h-8 gap-1.5 px-3.5 text-xs font-semibold">
                 {isLast ? (
                   <>
-                    <CheckCircle2 className="size-3" />
+                    <CheckCircle2 className="size-3.5" />
                     Concluir
                   </>
                 ) : (
                   <>
                     Próximo
-                    <ArrowRight className="size-3" />
+                    <ArrowRight className="size-3.5" />
                   </>
                 )}
               </Button>
@@ -324,12 +323,11 @@ export function OnboardingTutorial({ isOpen, onClose, onNavigateStep }: Onboardi
   )
 }
 
-/** Calcula a melhor posição na tela para o Card de instrução */
+/** Calcula a melhor posição na tela para o Card de instrução com delimitação estrita de viewport */
 function getCardPosition(rect: DOMRect | null, preferred = "right"): React.CSSProperties {
   const isMobile = typeof window !== "undefined" && window.innerWidth < 768
 
-  // Em telas pequenas, ancoramos o card na base da tela com largura adaptativa
-  // (calc(100vw - 2rem)) para nunca vazar ou cortar o conteúdo.
+  // Em telas pequenas (mobile), ancoragem estrita no rodapé
   if (isMobile) {
     return {
       bottom: "1rem",
@@ -346,57 +344,78 @@ function getCardPosition(rect: DOMRect | null, preferred = "right"): React.CSSPr
       left: "50%",
       transform: "translate(-50%, -50%)",
       width: "90%",
-      maxWidth: "420px",
+      maxWidth: "400px",
     }
   }
 
   const cardWidth = 380
-  // Estimativa conservadora — a altura real é limitada por max-height + scroll
-  // interno no próprio card, então uma folga aqui só evita reposicionamentos
-  // bruscos, nunca corta os botões (isso é garantido pelo CSS do card).
-  const cardHeight = 280
-  const spaceRight = window.innerWidth - rect.right
+  const cardHeight = 260
+  const winW = typeof window !== "undefined" ? window.innerWidth : 1200
+  const winH = typeof window !== "undefined" ? window.innerHeight : 800
+
+  const maxTop = Math.max(16, winH - cardHeight - 24)
+  const maxLeft = Math.max(16, winW - cardWidth - 24)
+
+  const spaceRight = winW - rect.right
   const spaceLeft = rect.left
-  const spaceBottom = window.innerHeight - rect.bottom
+  const spaceBottom = winH - rect.bottom
   const spaceTop = rect.top
 
-  // Se cabe à direita
+  // 1. Preferência Direita
   if (preferred === "right" && spaceRight >= cardWidth + 24) {
     return {
-      top: Math.max(16, Math.min(rect.top - 10, window.innerHeight - cardHeight - 24)),
-      left: rect.right + 20,
+      top: Math.max(16, Math.min(rect.top - 10, maxTop)),
+      left: Math.min(rect.right + 20, maxLeft),
       width: `${cardWidth}px`,
     }
   }
 
-  // Se cabe à esquerda
+  // 2. Preferência Esquerda
   if (preferred === "left" && spaceLeft >= cardWidth + 24) {
     return {
-      top: Math.max(16, Math.min(rect.top - 10, window.innerHeight - cardHeight - 24)),
-      left: rect.left - cardWidth - 20,
+      top: Math.max(16, Math.min(rect.top - 10, maxTop)),
+      left: Math.max(16, rect.left - cardWidth - 20),
       width: `${cardWidth}px`,
     }
   }
 
-  // Se cabe abaixo
-  if (spaceBottom >= cardHeight + 24) {
+  // 3. Preferência Abaixo
+  if (preferred === "bottom" && spaceBottom >= cardHeight + 24) {
     return {
-      top: rect.bottom + 20,
-      left: Math.max(16, Math.min(rect.left, window.innerWidth - cardWidth - 24)),
+      top: Math.min(rect.bottom + 16, maxTop),
+      left: Math.max(16, Math.min(rect.left, maxLeft)),
       width: `${cardWidth}px`,
     }
   }
 
-  // Se cabe acima
+  // 4. Preferência Acima
   if (spaceTop >= cardHeight + 24) {
     return {
-      top: Math.max(16, rect.top - cardHeight - 20),
-      left: Math.max(16, Math.min(rect.left, window.innerWidth - cardWidth - 24)),
+      top: Math.max(16, rect.top - cardHeight - 16),
+      left: Math.max(16, Math.min(rect.left, maxLeft)),
       width: `${cardWidth}px`,
     }
   }
 
-  // Centro da tela se nenhum lado tiver espaço suficiente
+  // Se cabe à direita em fallback
+  if (spaceRight >= cardWidth + 20) {
+    return {
+      top: Math.max(16, Math.min(rect.top, maxTop)),
+      left: Math.min(rect.right + 16, maxLeft),
+      width: `${cardWidth}px`,
+    }
+  }
+
+  // Se cabe abaixo em fallback
+  if (spaceBottom >= cardHeight + 20) {
+    return {
+      top: Math.min(rect.bottom + 16, maxTop),
+      left: Math.max(16, Math.min(rect.left, maxLeft)),
+      width: `${cardWidth}px`,
+    }
+  }
+
+  // Centro da tela com garantia de não cortar
   return {
     top: "50%",
     left: "50%",

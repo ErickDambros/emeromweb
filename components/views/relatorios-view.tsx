@@ -142,7 +142,7 @@ export function RelatoriosView() {
           </Select>
         </div>
         <ExportMenu
-          label="Exportar Relatório"
+          label="Baixar seleção"
           documentTitle={`Relatório Institucional — ${activeDataset.sheetName}`}
           documentSubtitle={`Fonte: ${activeDataset.fileName} · ${activeDataset.rowCount} registros analisados`}
           documentHash={authenticityHash(`${reportData.fileName}|${reportData.sheetName}|${reportData.rowCount}`)}

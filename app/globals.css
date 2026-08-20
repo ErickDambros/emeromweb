@@ -66,7 +66,7 @@
   --destructive: #f46a56;
   --border: #dce2e9;
   --input: #dce2e9;
-  --ring: #2e76aa;
+  --ring: #0095ff;
   --chart-1: #2e76aa;
   --chart-2: #0d2d46;
   --chart-3: #f56b19;
@@ -128,6 +128,7 @@
   * {
     @apply border-border outline-ring/50;
   }
+
   body {
     @apply bg-background text-foreground;
   }
@@ -139,9 +140,11 @@
   scroll-behavior: smooth;
   scrollbar-width: thin;
 }
+
 .scroll-touch::-webkit-scrollbar {
   height: 8px;
 }
+
 .scroll-touch::-webkit-scrollbar-thumb {
   background: var(--border);
   border-radius: 9999px;
@@ -152,12 +155,15 @@
   .no-print {
     display: none !important;
   }
+
   .print-area {
     display: block !important;
   }
+
   body {
     background: white !important;
   }
+
   @page {
     margin: 16mm;
     size: A4;
@@ -171,12 +177,15 @@
 html.font-size-sm {
   font-size: 14px;
 }
+
 html.font-size-md {
   font-size: 16px;
 }
+
 html.font-size-lg {
   font-size: 18px;
 }
+
 html.font-size-xl {
   font-size: 20px;
 }
@@ -225,29 +234,30 @@ html.high-contrast button {
 }
 
 /* ========================================================================== */
-/* VLibras — reposicionamento para não colidir com o Assistente RADAR       */
-/* O Assistente ocupa bottom-5/right-5 (20px, ~52px de altura). Deslocamos  */
-/* o botão do VLibras para cima dessa área e mantemos seu z-index abaixo do */
-/* Assistente (z-40) e do tutorial (z-50) para nunca sumir atrás deles.     */
+/* VLibras — reposicionamento harmônico com o Assistente RADAR e Acessibilidade */
+/* Hierarquia de camadas: Conteúdo (0-10) < VLibras (30) < Acessibilidade (35) */
+/* < Assistente (40/50) < Tutorial (60) < Diálogos/Modais (70).              */
 /* ========================================================================== */
 div[vw] {
   z-index: 30 !important;
 }
+
 div[vw] .vw-access-button {
   position: fixed !important;
   right: 20px !important;
-  bottom: 92px !important;
+  bottom: 96px !important;
   top: auto !important;
   left: auto !important;
   z-index: 30 !important;
 }
+
 div[vw] .vw-plugin-wrapper {
   z-index: 30 !important;
 }
+
 @media (max-width: 640px) {
   div[vw] .vw-access-button {
-    bottom: 84px !important;
-    right: 14px !important;
+    bottom: 88px !important;
+    right: 16px !important;
   }
 }
-
